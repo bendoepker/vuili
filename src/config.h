@@ -27,6 +27,9 @@
     #error Unknown platform
 #endif //PLATFORM
 
+/* Use Logging Functions */
+#define USE_LOGGING
+
 #define MAX_VIEWPORTS       64
 #define MAX_WINDOWS         8
 

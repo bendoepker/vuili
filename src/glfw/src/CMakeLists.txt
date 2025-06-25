@@ -1,5 +1,5 @@
 
-add_library(glfw STATIC
+add_library(glfw OBJECT
                  "${GLFW_SOURCE_DIR}/include/GLFW/glfw3.h"
                  "${GLFW_SOURCE_DIR}/include/GLFW/glfw3native.h"
                  internal.h platform.h mappings.h

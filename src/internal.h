@@ -178,7 +178,8 @@ typedef struct VuiliData {
         Size max_size;                      //Maximum size the window can be
         Size cur_size;                      //Current size of the window
         Position position;
-    } main_window;
+        i32 flags;
+    } window;
     struct {
         Size mouse_pos;                     //Mouse position in relation to main window
         Size mouse_pos_abs;                 //Mouse position in relation to desktop
