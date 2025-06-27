@@ -11,8 +11,7 @@ cmake_policy(SET CMP0063 NEW)
 # CMake tool directory
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake_tools)
 
-set(build_tests OFF)
-if(PROJECT_IS_TOP_LEVEL)
+if(NOT DEFINED build_tests AND PROJECT_IS_TOP_LEVEL)
     set(build_tests ON)
 endif()
 

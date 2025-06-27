@@ -2,6 +2,8 @@
 #define _VUILI_INTERNAL_H
 #include <stdint.h>
 #include <stdbool.h>
+#include <GLFW/glfw3.h>
+#include <GLFW/glfw3native.h>
 
 typedef uint8_t u8;
 typedef uint16_t u16;
@@ -178,7 +180,11 @@ typedef struct VuiliData {
         Size max_size;                      //Maximum size the window can be
         Size cur_size;                      //Current size of the window
         Position position;
-        i32 flags;
+        i64 flags;
+        bool maximized, minimized;          //Window is maximized / minimized
+        bool should_close;                  //Should the window close
+        bool drawing;
+        GLFWwindow* window;                 //Pointer to the GLFW window
     } window;
     struct {
         Size mouse_pos;                     //Mouse position in relation to main window

@@ -14,6 +14,7 @@ set(vuili_deps
 # Vuili Source Files
 set(vuili_src
     vuili.c
+    utils/log.c
 )
 
 # Vuili Header Files
@@ -36,7 +37,7 @@ target_link_libraries(vuili glfw)
 set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} -Isrc)
 
 # Add the src directory to the build include so that we can use #include <vuili.h>
-include_directories(${CMAKE_SOURCE_DIR}/src)
+include_directories(${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/src/utils)
 
 # Build tests
 if(${build_tests})
