@@ -8,11 +8,6 @@ endif()
 # Set the C Standard
 set(CMAKE_C_STANDARD 23)
 
-# Add Compiler Flags
-target_compile_options(vuili PRIVATE
-    -Wimplicit-fallthrough
-)
-
 # Add Linker Flags
 target_link_options(vuili PRIVATE
 

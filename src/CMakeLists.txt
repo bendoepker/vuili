@@ -3,6 +3,7 @@ project(vuili C)
 # Add GLFW to the library but make its symbols hidden in the case of a shared library
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/glfw)
 if(BUILD_SHARED_LIBS)
+    # WARN: untested
     set_property(TARGET glfw PROPERTY C_VISIBILITY_PRESET hidden)
 endif()
 
@@ -15,6 +16,7 @@ set(vuili_deps
 set(vuili_src
     vuili.c
     utils/log.c
+    glad/src/gl.c
 )
 
 # Vuili Header Files
@@ -46,7 +48,11 @@ target_link_libraries(vuili glfw)
 set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} -Isrc)
 
 # Add the src directory to the build include so that we can use #include <vuili.h>
-include_directories(${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/src/utils)
+target_include_directories(vuili PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils
+    ${CMAKE_CURRENT_SOURCE_DIR}/glad/include
+)
 
 # Build tests
 if(${build_tests})
