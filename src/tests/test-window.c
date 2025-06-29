@@ -8,12 +8,11 @@ int main() {
     V_ToggleWindowFlags(flags);
     V_SetWindowFramerate(framerate);
     V_InitWindow("Test Window", 500, 500, 1200, 800);
+    V_SetMinWindowSize(100, 100);
+    V_SetMaxWindowSize(1400, 1000);
 
     while(!V_WindowShouldClose()) {
         //Main window rendering loop
-        V_BeginDrawing();
-        V_EndDrawing();
-        V_SwapBuffers();
         Sleep(16);
     }
 

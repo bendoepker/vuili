@@ -29,7 +29,16 @@ add_library(vuili ${vuili_src} ${vuili_hdr})
 include(BuildConfig)
 
 # Vuili Include Directories
-set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} -Iglfw/include)
+set(CMAKE_C_FLAGS
+    ${CMAKE_C_FLAGS}
+    -Iglfw/include
+    -Wimplicit-fallthrough
+)
+
+# Get rid of those pesky windows warnings, I know the consequences...
+if(WIN32)
+    add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+endif()
 
 # Link the library
 target_link_libraries(vuili glfw)

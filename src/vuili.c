@@ -20,14 +20,26 @@ static void __v_set_error_text(const char* const text, int n) {
     strncpy(VuiliErrorText, text, n);
 }
 
-static void __window_close_callback(GLFWwindow* data) {
-    (void)data;
+static void __window_close_callback(GLFWwindow* window) {
+    (void)window;
     _VDATA.window.should_close = true;
+}
+
+static void __window_pos_callback(GLFWwindow* window, int x, int y) {
+    (void)window;
+    _VDATA.window.position.x = x;
+    _VDATA.window.position.y = y;
+}
+
+static void __window_size_callback(GLFWwindow* window, int x, int y) {
+    (void)window;
+    _VDATA.window.size.x = x;
+    _VDATA.window.size.y = y;
 }
 
 void V_InitWindow(const char* title, int pos_x, int pos_y, int width, int height) {
     _VDATA.window.position = (Size){ .x = pos_x, .y = pos_y };
-    _VDATA.window.cur_size = (Size){ .x = width, .y = height };
+    _VDATA.window.size = (Size){ .x = width, .y = height };
 
     /* Initialize the GLFW Library */
     if(!glfwInit()) {
@@ -41,7 +53,10 @@ void V_InitWindow(const char* title, int pos_x, int pos_y, int width, int height
     _VDATA.window.should_close = false;
     glfwSetWindowPos(_VDATA.window.window, pos_x, pos_y);
 
+    /* Set GLFW callbacks */
     glfwSetWindowCloseCallback(_VDATA.window.window, __window_close_callback);
+    glfwSetWindowPosCallback(_VDATA.window.window, __window_pos_callback);
+    glfwSetWindowSizeCallback(_VDATA.window.window, __window_size_callback);
 }
 
 void V_CloseWindow() {
@@ -63,7 +78,6 @@ void V_EndDrawing() {
 }
 
 void V_SwapBuffers() {
-    assert(!_VDATA.window.drawing && "Cannot swap buffers while");
     glfwSwapBuffers(_VDATA.window.window);
 }
 
@@ -72,13 +86,62 @@ const char* V_GetLastErrorText() {
 }
 
 void V_SetMinWindowSize(int width, int height) {
+    if(width <= 0 || height <= 0) {
+        __v_set_error_text("Minimum size must be above 0", 29);
+        return;
+    }
+
+    if(width > _VDATA.window.max_size.x || height > _VDATA.window.max_size.y) {
+        __v_set_error_text("Minimum size cannot be greater than or equal to the maximum size", 65);
+        return;
+    }
     _VDATA.window.min_size = (Size) { .x = width, .y = height };
-    glfwSetWindowSizeLimits(_VDATA.window.window, width, height, GLFW_DONT_CARE, GLFW_DONT_CARE);
+    int x = GLFW_DONT_CARE, y = GLFW_DONT_CARE;
+    if(_VDATA.window.max_size.x) {
+        //Max size is set, so it must be registered with glfw
+        x = _VDATA.window.max_size.x;
+        y = _VDATA.window.max_size.y;
+    }
+    glfwSetWindowSizeLimits(_VDATA.window.window, width, height, x, y);
 }
 
 void V_SetMaxWindowSize(int width, int height) {
+    if(width <= 0 || height <= 0) {
+        __v_set_error_text("Maximum size must be above 0", 29);
+        return;
+    }
+
+    if(width < _VDATA.window.min_size.x || height < _VDATA.window.max_size.y) {
+        __v_set_error_text("Maximum size must be greater than or equal to the minimum size", 63);
+    }
     _VDATA.window.max_size = (Size) { .x = width, .y = height };
-    glfwSetWindowSizeLimits(_VDATA.window.window, GLFW_DONT_CARE, GLFW_DONT_CARE, width, height);
+    int x = GLFW_DONT_CARE, y = GLFW_DONT_CARE;
+    if(_VDATA.window.min_size.x) {
+        //Min size is set, so it must be registered with glfw
+        x = _VDATA.window.min_size.x;
+        y = _VDATA.window.min_size.y;
+    }
+    glfwSetWindowSizeLimits(_VDATA.window.window, x, y, width, height);
+}
+
+void V_UnsetMaxWindowSize() {
+    int x = GLFW_DONT_CARE, y = GLFW_DONT_CARE;
+    if(_VDATA.window.min_size.x) {
+        //Minimum size is set, don't disturb this
+        x = _VDATA.window.min_size.x;
+        y = _VDATA.window.min_size.y;
+    }
+    glfwSetWindowSizeLimits(_VDATA.window.window, x, y, GLFW_DONT_CARE, GLFW_DONT_CARE);
+}
+
+void V_UnsetMinWindowSize() {
+    int x = GLFW_DONT_CARE, y = GLFW_DONT_CARE;
+    if(_VDATA.window.max_size.x) {
+        //Maximum size is set, don't disturb this
+        x = _VDATA.window.max_size.x;
+        y = _VDATA.window.max_size.y;
+    }
+    glfwSetWindowSizeLimits(_VDATA.window.window, GLFW_DONT_CARE, GLFW_DONT_CARE, x, y);
 }
 
 void V_ToggleFullscreen() {
@@ -99,11 +162,63 @@ void V_ChangeWindowFlags(int flags) {
     //TODO: Set the flags in GLFW
 }
 
+void V_SetWindowTitle(const char* title) {
+    glfwSetWindowTitle(_VDATA.window.window, title);
+}
+
 bool V_WindowShouldClose() {
     return _VDATA.window.should_close;
 }
 
+void V_SetWindowShouldClose() {
+    _VDATA.window.should_close = true;
+}
+
+V_Vec2 V_GetWindowPos() {
+    return (V_Vec2) {
+        .x = _VDATA.window.position.x,
+        .y = _VDATA.window.position.y
+    };
+}
+
+void V_SetWindowPos(int x, int y) {
+    glfwSetWindowPos(_VDATA.window.window, x, y);
+}
+
+V_Vec2 V_GetWindowSize() {
+    return (V_Vec2) {
+        .x = _VDATA.window.size.x,
+        .y = _VDATA.window.size.y
+    };
+}
+
+void V_SetWindowSize(int x, int y) {
+    glfwSetWindowSize(_VDATA.window.window, x, y);
+}
+
 V_Vec2 V_GetMousePositionAbsolute() {
-    //TODO: This is going to be OS / Compositor specific
-    return (V_Vec2) { 0, 0 };
+    int x, y;
+    double x1, y1;
+    glfwGetWindowPos(_VDATA.window.window, &x, &y);
+    glfwGetCursorPos(_VDATA.window.window, &x1, &y1);
+    x1 += x;
+    y1 += y;
+
+    return (V_Vec2) { .x = x1, .y = y1 };
+}
+
+V_Vec2 V_GetMousePosition() {
+    double x, y;
+    glfwGetCursorPos(_VDATA.window.window, &x, &y);
+
+    return (V_Vec2){ .x = x, .y = y };
+}
+
+V_Rect V_GetWindowRect() {
+    return (V_Rect) {
+        .x = _VDATA.window.position.x,
+        .y = _VDATA.window.position.y,
+        .width = _VDATA.window.size.x,
+        .height = _VDATA.window.size.y
+    };
 }

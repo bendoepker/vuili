@@ -178,7 +178,7 @@ typedef struct VuiliData {
     struct {
         Size min_size;                      //Minimum size the window can be
         Size max_size;                      //Maximum size the window can be
-        Size cur_size;                      //Current size of the window
+        Size size;                      //Current size of the window
         Position position;
         i64 flags;
         bool maximized, minimized;          //Window is maximized / minimized
@@ -189,6 +189,9 @@ typedef struct VuiliData {
     struct {
         Size mouse_pos;                     //Mouse position in relation to main window
         Size mouse_pos_abs;                 //Mouse position in relation to desktop
+        InputState mouse_state;             //Mouse state
+
+        //TODO: Keyboard input handling
     } input;
 } VuiliData;
 
