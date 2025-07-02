@@ -33,4 +33,7 @@
 #define MAX_VIEWPORTS       64
 #define MAX_WINDOWS         8
 
+/* On windows this will help set framerate to desired rate */
+#define USE_HIGH_RES_TIMER  1
+
 #endif //_VUILI_CONFIG_H

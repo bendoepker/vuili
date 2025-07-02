@@ -10,7 +10,7 @@
     - GetLastErrorText() ✓
     - GetLastError() ✗
 - Inner Utility
-    - High Resolution Timer ✗
+    - High Resolution Timer ✓
 
 ## Basic Window Utilities
 
@@ -26,18 +26,18 @@
     - SetMaxWindowSize() ✓
     - UnsetMinWindowSize() ✓
     - UnsetMaxWindowSize() ✓
-    - MaximizeWindow() ✗
-    - MinimizeWindow() ✗
-    - ToggleFullscreen() ✗
     - ToggleWindowFlags() ✓
-    - ChangeWindowFlags() ✗
     - SetWindowTitle() ✓
     - GetWindowPos() ✓
     - SetWindowPos() ✓
+    - SetWindowFramerate() ✓
+    - GetWindowRect ✓
+    - MaximizeWindow() ✗
+    - MinimizeWindow() ✗
+    - ToggleFullscreen() ✗
+    - ChangeWindowFlags() ✗
     - BeginDrawing() ✗
     - EndDrawing() ✗
-    - SetWindowFramerate() ✗
-    - GetWindowRect ✓
 - Input Handling ✗
     - GetMousePos() -> Vec2 ✓
     - GetMousePosAbs() -> Vec2 ✓
@@ -48,9 +48,15 @@
     - Viewport Structure integration ✗
     - Detatchable windows ✗
 - Drawing
+    - Shader loader / management functions
+    - Textures / texture manipulation
     - Fonts
     - Shapes
         - Vector transformations (Rotations, Scale, Translations)
         - Rectangle
         - Triangle
-        - 
+- UI Tools
+    - Buttons
+    - Sliders
+    - Text Box
+    - Scroll Bars

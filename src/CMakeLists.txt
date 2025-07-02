@@ -44,6 +44,9 @@ endif()
 
 # Link the library
 target_link_libraries(vuili glfw)
+if(WIN32) # TODO: Only link to winmm when needed (as of right now that is when USE_HIGH_RES_TIMER == 1)
+    target_link_libraries(vuili winmm)
+endif()
 
 set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} -Isrc)
 

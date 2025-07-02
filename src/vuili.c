@@ -1,6 +1,7 @@
 #include "vuili.h"
 
 /* Internal types and structures */
+/* Includes glfw and glad */
 #include "internal.h"
 
 /* Logging */
@@ -37,6 +38,10 @@ static void __window_size_callback(GLFWwindow* window, int x, int y) {
     _VDATA.window.size.y = y;
 }
 
+static void __glfw_error_callback(int error, const char* error_text) {
+    PRINT("GLFW Error: code: %d, description: %s", error, error_text);
+}
+
 void V_InitWindow(const char* title, int pos_x, int pos_y, int width, int height) {
     _VDATA.window.position = (Size){ .x = pos_x, .y = pos_y };
     _VDATA.window.size = (Size){ .x = width, .y = height };
@@ -48,15 +53,43 @@ void V_InitWindow(const char* title, int pos_x, int pos_y, int width, int height
         __v_set_error_text("Failed to initialize GLFW", 26);
         return;
     }
+    glfwSetErrorCallback(__glfw_error_callback);
+
+    /* GLFW OpenGL hints */
+    /* NOTE: We are using our own generated Glad files so we can use 4.6 */
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     _VDATA.window.window = glfwCreateWindow(width, height, title, NULL, NULL);
+    if(!_VDATA.window.window) {
+        /* GLFW failed to create the window, abort the program */
+        __v_set_error_text("GLFW failed to create a window", 31);
+        glfwTerminate();
+        return;
+    }
+    glfwMakeContextCurrent(_VDATA.window.window); //Sync glfw to gl context
     _VDATA.window.should_close = false;
     glfwSetWindowPos(_VDATA.window.window, pos_x, pos_y);
+
+    /* Load the GL library */
+    int version_glad = gladLoadGL(glfwGetProcAddress);
+    if(version_glad == 0) {
+        /* Glad failed to load OpenGL*/
+        __v_set_error_text("Glad failed to load OpenGL 4.6", 31);
+        return;
+    }
+    PRINT("Loaded OpenGL version %i.%i", GLAD_VERSION_MAJOR(version_glad), GLAD_VERSION_MINOR(version_glad));
 
     /* Set GLFW callbacks */
     glfwSetWindowCloseCallback(_VDATA.window.window, __window_close_callback);
     glfwSetWindowPosCallback(_VDATA.window.window, __window_pos_callback);
     glfwSetWindowSizeCallback(_VDATA.window.window, __window_size_callback);
+
+#if defined(_WIN32) && defined(USE_HIGH_RES_TIMER)
+    timeBeginPeriod(1);
+#endif
 }
 
 void V_CloseWindow() {
@@ -64,17 +97,32 @@ void V_CloseWindow() {
         glfwDestroyWindow(_VDATA.window.window);
     memset(&_VDATA, 0, sizeof(_VDATA));
     glfwTerminate();
+#if defined(_WIN32) && defined(USE_HIGH_RES_TIMER)
+    timeEndPeriod(1);
+#endif
 }
 
 void V_BeginDrawing() {
-    //TODO:
     _VDATA.window.drawing = true;
+
+    /* Reset the frame timer */
+    if(_VDATA.window.max_frame_time != 0)
+        glfwSetTime(0);
 }
 
 void V_EndDrawing() {
-    //TODO:
     _VDATA.window.drawing = false;
     glfwPollEvents();
+    V_SwapBuffers();
+
+    /* Partial busy sleep until next frame */
+    if(_VDATA.window.max_frame_time != 0) {
+        for(;;) {
+            if(glfwGetTime() > _VDATA.window.max_frame_time)
+                break;
+            else Sleep(1); /* NOTE: USE_HIGH_RES_TIMER will increase this accuracy on windows */
+        }
+    }
 }
 
 void V_SwapBuffers() {
@@ -153,7 +201,10 @@ void V_ToggleWindowFlags(int flags) {
 }
 
 void V_SetWindowFramerate(int framerate) {
-    //TODO:
+    if(framerate == 0)
+        _VDATA.window.max_frame_time = 0;
+    else
+        _VDATA.window.max_frame_time = 1.f / framerate; /* Time in milliseconds */
 }
 
 // NOTE: This will toggle the flags in _VDATA then set it in GLFW

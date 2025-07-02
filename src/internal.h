@@ -7,6 +7,7 @@
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
 #include <GLFW/glfw3native.h>
+#include <config.h>
 
 typedef uint8_t u8;
 typedef uint16_t u16;
@@ -27,6 +28,16 @@ typedef struct {
     i32 y;
 } Size;
 typedef Size Position;
+
+#ifdef _WIN32
+    __declspec(dllimport) void __stdcall Sleep(unsigned long milli);
+    #if defined(USE_HIGH_RES_TIMER)
+        __declspec(dllimport) unsigned int timeBeginPeriod(unsigned int uPeriod);
+        __declspec(dllimport) unsigned int timeEndPeriod(unsigned int uPeriod);
+    #endif
+#elif defined(__linux__)
+    //TODO: Sleep function for linux
+#endif
 
 //Key codes align with GLFW key codes
 typedef enum {
@@ -187,6 +198,7 @@ typedef struct VuiliData {
         bool maximized, minimized;          //Window is maximized / minimized
         bool should_close;                  //Should the window close
         bool drawing;
+        double max_frame_time;
         GLFWwindow* window;                 //Pointer to the GLFW window
     } window;
     struct {
