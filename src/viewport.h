@@ -1,7 +1,6 @@
 #ifndef R_VIEWPORT_H
 #define R_VIEWPORT_H
 
-#include "raylib.h"
 #include "config.h"
 
 /*
@@ -38,7 +37,7 @@ typedef enum {
 typedef struct {
     ViewportID parent;                          //Parent ID of the viewport
     unsigned int num_children;                  //Number of child viewports
-    ViewportID children[MAX_CHILD_VIEWPORTS];   //Child viewport ID numbers
+    ViewportID children[MAX_VIEWPORTS];   //Child viewport ID numbers
     ViewportType type;                          //Viewport type (docking / static)
     ViewportAxis axis;                          //Render flow of the viewport
     Rectangle drawable_area;

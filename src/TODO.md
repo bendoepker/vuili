@@ -32,12 +32,18 @@
     - SetWindowPos() ✓
     - SetWindowFramerate() ✓
     - GetWindowRect ✓
+
+    - ClearBackground() ✗
     - MaximizeWindow() ✗
     - MinimizeWindow() ✗
     - ToggleFullscreen() ✗
     - ChangeWindowFlags() ✗
-    - BeginDrawing() ✗
-    - EndDrawing() ✗
+    - BeginDrawing() ✗ (Partial)
+    - EndDrawing() ✗ (Partial)
+    - Viewports ✗
+        - Retained Mode Drawing ✗
+        - Framework
+    - Custom Window Frame
 - Input Handling ✗
     - GetMousePos() -> Vec2 ✓
     - GetMousePosAbs() -> Vec2 ✓
@@ -55,8 +61,12 @@
         - Vector transformations (Rotations, Scale, Translations)
         - Rectangle
         - Triangle
-- UI Tools
+- UI Tools ✗
     - Buttons
     - Sliders
     - Text Box
     - Scroll Bars
+- Unsorted Feature Set ✗
+    - Undo / Redo
+    - Config File Read / Write
+    - Light / Dark mode recognization

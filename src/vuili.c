@@ -42,7 +42,7 @@ static void __glfw_error_callback(int error, const char* error_text) {
     PRINT("GLFW Error: code: %d, description: %s", error, error_text);
 }
 
-void V_InitWindow(const char* title, int pos_x, int pos_y, int width, int height) {
+void VFP(InitWindow)(const char* title, int pos_x, int pos_y, int width, int height) {
     _VDATA.window.position = (Size){ .x = pos_x, .y = pos_y };
     _VDATA.window.size = (Size){ .x = width, .y = height };
 
@@ -87,22 +87,26 @@ void V_InitWindow(const char* title, int pos_x, int pos_y, int width, int height
     glfwSetWindowPosCallback(_VDATA.window.window, __window_pos_callback);
     glfwSetWindowSizeCallback(_VDATA.window.window, __window_size_callback);
 
-#if defined(_WIN32) && defined(USE_HIGH_RES_TIMER)
+#if (PLATFORM == WINDOWS) && defined(USE_HIGH_RES_TIMER)
     timeBeginPeriod(1);
 #endif
 }
 
-void V_CloseWindow() {
+void VFP(CloseWindow)() {
     if(_VDATA.window.window)
         glfwDestroyWindow(_VDATA.window.window);
     memset(&_VDATA, 0, sizeof(_VDATA));
     glfwTerminate();
-#if defined(_WIN32) && defined(USE_HIGH_RES_TIMER)
+#if (PLATFORM == WINDOWS) && defined(USE_HIGH_RES_TIMER)
     timeEndPeriod(1);
 #endif
 }
 
-void V_BeginDrawing() {
+void VFP(ClearFrame)(VFP(Color) color) {
+    //TODO: ^
+}
+
+void VFP(BeginDrawing)() {
     _VDATA.window.drawing = true;
 
     /* Reset the frame timer */
@@ -110,10 +114,10 @@ void V_BeginDrawing() {
         glfwSetTime(0);
 }
 
-void V_EndDrawing() {
+void VFP(EndDrawing)() {
     _VDATA.window.drawing = false;
     glfwPollEvents();
-    V_SwapBuffers();
+    VFP(SwapBuffers)();
 
     /* Partial busy sleep until next frame */
     if(_VDATA.window.max_frame_time != 0) {
@@ -125,15 +129,30 @@ void V_EndDrawing() {
     }
 }
 
-void V_SwapBuffers() {
+void VFP(SwapBuffers)() {
     glfwSwapBuffers(_VDATA.window.window);
 }
 
-const char* V_GetLastErrorText() {
+void VFP(DrawFrame)() {
+    /* Viewport Walking */
+
+    glfwPollEvents();
+
+    /* Partial busy sleep until next frame */
+    if(_VDATA.window.max_frame_time != 0) {
+        for(;;) {
+            if(glfwGetTime() > _VDATA.window.max_frame_time)
+                break;
+            else Sleep(1); /* NOTE: USE_HIGH_RES_TIMER will increase this accuracy on windows */
+        }
+    }
+}
+
+const char* VFP(GetLastErrorText)() {
     return VuiliErrorText;
 }
 
-void V_SetMinWindowSize(int width, int height) {
+void VFP(SetMinWindowSize)(int width, int height) {
     if(width <= 0 || height <= 0) {
         __v_set_error_text("Minimum size must be above 0", 29);
         return;
@@ -153,7 +172,7 @@ void V_SetMinWindowSize(int width, int height) {
     glfwSetWindowSizeLimits(_VDATA.window.window, width, height, x, y);
 }
 
-void V_SetMaxWindowSize(int width, int height) {
+void VFP(SetMaxWindowSize)(int width, int height) {
     if(width <= 0 || height <= 0) {
         __v_set_error_text("Maximum size must be above 0", 29);
         return;
@@ -172,7 +191,7 @@ void V_SetMaxWindowSize(int width, int height) {
     glfwSetWindowSizeLimits(_VDATA.window.window, x, y, width, height);
 }
 
-void V_UnsetMaxWindowSize() {
+void VFP(UnsetMaxWindowSize)() {
     int x = GLFW_DONT_CARE, y = GLFW_DONT_CARE;
     if(_VDATA.window.min_size.x) {
         //Minimum size is set, don't disturb this
@@ -182,7 +201,7 @@ void V_UnsetMaxWindowSize() {
     glfwSetWindowSizeLimits(_VDATA.window.window, x, y, GLFW_DONT_CARE, GLFW_DONT_CARE);
 }
 
-void V_UnsetMinWindowSize() {
+void VFP(UnsetMinWindowSize)() {
     int x = GLFW_DONT_CARE, y = GLFW_DONT_CARE;
     if(_VDATA.window.max_size.x) {
         //Maximum size is set, don't disturb this
@@ -192,15 +211,15 @@ void V_UnsetMinWindowSize() {
     glfwSetWindowSizeLimits(_VDATA.window.window, GLFW_DONT_CARE, GLFW_DONT_CARE, x, y);
 }
 
-void V_ToggleFullscreen() {
+void VFP(ToggleFullscreen)() {
     //TODO:
 }
 
-void V_ToggleWindowFlags(int flags) {
+void VFP(ToggleWindowFlags)(int flags) {
     _VDATA.window.flags ^= flags;
 }
 
-void V_SetWindowFramerate(int framerate) {
+void VFP(SetWindowFramerate)(int framerate) {
     if(framerate == 0)
         _VDATA.window.max_frame_time = 0;
     else
@@ -208,46 +227,46 @@ void V_SetWindowFramerate(int framerate) {
 }
 
 // NOTE: This will toggle the flags in _VDATA then set it in GLFW
-void V_ChangeWindowFlags(int flags) {
-    V_ToggleWindowFlags(flags);
+void VFP(ChangeWindowFlags)(int flags) {
+    VFP(ToggleWindowFlags)(flags);
     //TODO: Set the flags in GLFW
 }
 
-void V_SetWindowTitle(const char* title) {
+void VFP(SetWindowTitle)(const char* title) {
     glfwSetWindowTitle(_VDATA.window.window, title);
 }
 
-bool V_WindowShouldClose() {
+bool VFP(WindowShouldClose)() {
     return _VDATA.window.should_close;
 }
 
-void V_SetWindowShouldClose() {
+void VFP(SetWindowShouldClose)() {
     _VDATA.window.should_close = true;
 }
 
-V_Vec2 V_GetWindowPos() {
-    return (V_Vec2) {
+VFP(Vec2) VFP(GetWindowPos)() {
+    return (VFP(Vec2)) {
         .x = _VDATA.window.position.x,
         .y = _VDATA.window.position.y
     };
 }
 
-void V_SetWindowPos(int x, int y) {
+void VFP(SetWindowPos)(int x, int y) {
     glfwSetWindowPos(_VDATA.window.window, x, y);
 }
 
-V_Vec2 V_GetWindowSize() {
-    return (V_Vec2) {
+VFP(Vec2) VFP(GetWindowSize)() {
+    return (VFP(Vec2)) {
         .x = _VDATA.window.size.x,
         .y = _VDATA.window.size.y
     };
 }
 
-void V_SetWindowSize(int x, int y) {
+void VFP(SetWindowSize)(int x, int y) {
     glfwSetWindowSize(_VDATA.window.window, x, y);
 }
 
-V_Vec2 V_GetMousePositionAbsolute() {
+VFP(Vec2) VFP(GetMousePositionAbsolute)() {
     int x, y;
     double x1, y1;
     glfwGetWindowPos(_VDATA.window.window, &x, &y);
@@ -255,18 +274,18 @@ V_Vec2 V_GetMousePositionAbsolute() {
     x1 += x;
     y1 += y;
 
-    return (V_Vec2) { .x = x1, .y = y1 };
+    return (VFP(Vec2)) { .x = x1, .y = y1 };
 }
 
-V_Vec2 V_GetMousePosition() {
+VFP(Vec2) VFP(GetMousePosition)() {
     double x, y;
     glfwGetCursorPos(_VDATA.window.window, &x, &y);
 
-    return (V_Vec2){ .x = x, .y = y };
+    return (VFP(Vec2)){ .x = x, .y = y };
 }
 
-V_Rect V_GetWindowRect() {
-    return (V_Rect) {
+VFP(Rect) VFP(GetWindowRect)() {
+    return (VFP(Rect)) {
         .x = _VDATA.window.position.x,
         .y = _VDATA.window.position.y,
         .width = _VDATA.window.size.x,

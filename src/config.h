@@ -30,10 +30,13 @@
 /* Use Logging Functions */
 #define USE_LOGGING
 
-#define MAX_VIEWPORTS       64
-#define MAX_WINDOWS         8
+/* Use Custom Vuili Function Prefix */
+#define VUILI_FUNCTION_PREFIX   1
+
+#define MAX_VIEWPORTS           64
+#define MAX_WINDOWS             8
 
 /* On windows this will help set framerate to desired rate */
-#define USE_HIGH_RES_TIMER  1
+#define USE_HIGH_RES_TIMER      1
 
 #endif //_VUILI_CONFIG_H

@@ -3,21 +3,31 @@
 
 /* For bool */
 #include <stdbool.h>
+#include <config.h>
+
+/*
+* #define VUILI_FUNCTION_PREFIX to enable function prefixes
+*/
+#ifdef VUILI_FUNCTION_PREFIX
+    #define VFP(x) V_##x
+#else
+    #define VFP(x) x
+#endif
 
 /* Vuili Vector Types */
-typedef struct { float x, y; } V_Vec2;
-typedef struct { float x, y, z; } V_Vec3;
-typedef struct { float x, y, z, a; } V_Vec4;
+typedef struct { float x, y; } VFP(Vec2);
+typedef struct { float x, y, z; } VFP(Vec3);
+typedef struct { float x, y, z, a; } VFP(Vec4);
 
 /* Vuili Color Type and Constants */
-typedef struct { unsigned char r, g, b, a; } V_Color;
-#define BLACK (V_Color){ 0x00, 0x00, 0x00, 0x00 }
-#define WHITE (V_Color){ 0xFF, 0xFF, 0xFF, 0xFF }
+typedef struct { unsigned char r, g, b, a; } VFP(Color);
+#define BLACK (VFP(Color)){ 0x00, 0x00, 0x00, 0x00 }
+#define WHITE (VFP(Color)){ 0xFF, 0xFF, 0xFF, 0xFF }
 
 /* Vuili Shape Types */
-typedef struct { float x, y, width, height; } V_Rect;
-typedef struct { V_Vec2 v1, v2, v3; } V_Tri;
-typedef struct { float x1, y1, x2, y2; } V_Line;
+typedef struct { float x, y, width, height; } VFP(Rect);
+typedef struct { VFP(Vec2) v1, v2, v3; } VFP(Tri);
+typedef struct { float x1, y1, x2, y2; } VFP(Line);
 
 typedef enum {
     //TODO:
@@ -33,78 +43,84 @@ typedef enum {
     FLAG_UNUSED07       = 0x00000200ull,
     FLAG_UNUSED08       = 0x00000400ull,
     FLAG_UNUSED09       = 0x00000800ull,
-} V_WindowFlags;
+} VFP(WindowFlags);
 
 /* Initialize the window context and create the window */
-void V_InitWindow(const char* title, int pos_x, int pos_y, int width, int height);
+void VFP(InitWindow)(const char* title, int pos_x, int pos_y, int width, int height);
 
 /* Close the window and uninitialize the context */
-void V_CloseWindow();
+void VFP(CloseWindow)();
+
+/* Clears the drawing of the previous frame */
+void VFP(ClearFrame)(VFP(Color) color);
 
 /* Begin Drawing for the current frame */
-void V_BeginDrawing();
+void VFP(BeginDrawing)();
 
 /* End Drawing for the current frame, swap buffers and sleep for designated time */
-void V_EndDrawing();
+void VFP(EndDrawing)();
 
 /* Swap Frame Buffers (must not be currently drawing to the frame)*/
-void V_SwapBuffers();
+void VFP(SwapBuffers)();
+
+/* Retained mode drawing */
+void VFP(DrawFrame)();
 
 /* Set the minimum size of a window */
-void V_SetMinWindowSize(int width, int height);
+void VFP(SetMinWindowSize)(int width, int height);
 
 /* Set the maximum size of a window */
-void V_SetMaxWindowSize(int width, int height);
+void VFP(SetMaxWindowSize)(int width, int height);
 
 /* Unset the window maximum size */
-void V_UnsetMaxWindowSize();
+void VFP(UnsetMaxWindowSize)();
 
 /* Unset the window minimum size */
-void V_UnsetMinWindowSize();
+void VFP(UnsetMinWindowSize)();
 
 /* Get the a description of the last error */
-const char* V_GetLastErrorText();
+const char* VFP(GetLastErrorText)();
 
 /* Toggle the main window to fullscreen */
-void V_ToggleFullscreen();
+void VFP(ToggleFullscreen)();
 
 /* Toggle flags for the window without applying them (Useful before initializing the window) */
-void V_ToggleWindowFlags(int flags);
+void VFP(ToggleWindowFlags)(int flags);
 
 /* Toggle and apply the flags to the window */
-void V_ChangeWindowFlags(int flags);
+void VFP(ChangeWindowFlags)(int flags);
 
 /* Set the window title */
-void V_SetWindowTitle(const char* title);
+void VFP(SetWindowTitle)(const char* title);
 
 /* Set the max framerate for the window */
-void V_SetWindowFramerate(int framerate);
+void VFP(SetWindowFramerate)(int framerate);
 
 /* Query to see if the window should close */
-bool V_WindowShouldClose();
+bool VFP(WindowShouldClose)();
 
 /* Send a signal to close the window, sets the window should close flag */
-void V_SetWindowShouldClose();
+void VFP(SetWindowShouldClose)();
 
 /* Get the window position in screen space */
-V_Vec2 V_GetWindowPos();
+VFP(Vec2) VFP(GetWindowPos)();
 
 /* Set the window position in screen space */
-void V_SetWindowPos(int x, int y);
+void VFP(SetWindowPos)(int x, int y);
 
 /* Get the window size */
-V_Vec2 V_GetWindowSize();
+VFP(Vec2) VFP(GetWindowSize)();
 
 /* Set the window size */
-void V_SetWindowSize(int x, int y);
+void VFP(SetWindowSize)(int x, int y);
 
 /* Get the position of the mouse in relation to the top left of the top left monitor */
-V_Vec2 V_GetMousePositionAbsolute();
+VFP(Vec2) VFP(GetMousePositionAbsolute)();
 
 /* Get the position of the mouse in relation to the top left of the window */
-V_Vec2 V_GetMousePosition();
+VFP(Vec2) VFP(GetMousePosition)();
 
 /* Get the drawable rectangle of the main window */
-V_Rect V_GetWindowRect();
+VFP(Rect) VFP(GetWindowRect)();
 
 #endif //_VUILI_H

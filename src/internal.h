@@ -29,7 +29,7 @@ typedef struct {
 } Size;
 typedef Size Position;
 
-#ifdef _WIN32
+#if (PLATFORM == WINDOWS)
     __declspec(dllimport) void __stdcall Sleep(unsigned long milli);
     #if defined(USE_HIGH_RES_TIMER)
         __declspec(dllimport) unsigned int timeBeginPeriod(unsigned int uPeriod);
@@ -37,6 +37,8 @@ typedef Size Position;
     #endif
 #elif defined(__linux__)
     //TODO: Sleep function for linux
+#elif defined(__APPLE__)
+    //TODO: Sleep function for MacOS
 #endif
 
 //Key codes align with GLFW key codes
