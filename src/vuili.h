@@ -3,47 +3,7 @@
 
 /* For bool */
 #include <stdbool.h>
-#include <config.h>
-
-/*
-* #define VUILI_FUNCTION_PREFIX to enable function prefixes
-*/
-#ifdef VUILI_FUNCTION_PREFIX
-    #define VFP(x) V_##x
-#else
-    #define VFP(x) x
-#endif
-
-/* Vuili Vector Types */
-typedef struct { float x, y; } VFP(Vec2);
-typedef struct { float x, y, z; } VFP(Vec3);
-typedef struct { float x, y, z, a; } VFP(Vec4);
-
-/* Vuili Color Type and Constants */
-typedef struct { unsigned char r, g, b, a; } VFP(Color);
-#define BLACK (VFP(Color)){ 0x00, 0x00, 0x00, 0x00 }
-#define WHITE (VFP(Color)){ 0xFF, 0xFF, 0xFF, 0xFF }
-
-/* Vuili Shape Types */
-typedef struct { float x, y, width, height; } VFP(Rect);
-typedef struct { VFP(Vec2) v1, v2, v3; } VFP(Tri);
-typedef struct { float x1, y1, x2, y2; } VFP(Line);
-
-typedef enum {
-    //TODO:
-    WINDOW_RESIZABLE    = 0x00000001ull,
-    WINDOW_FULLSCREEN   = 0x00000002ull,
-    FLAG_UNUSED00       = 0x00000004ull,
-    FLAG_UNUSED01       = 0x00000008ull,
-    FLAG_UNUSED02       = 0x00000010ull,
-    FLAG_UNUSED03       = 0x00000020ull,
-    FLAG_UNUSED04       = 0x00000040ull,
-    FLAG_UNUSED05       = 0x00000080ull,
-    FLAG_UNUSED06       = 0x00000100ull,
-    FLAG_UNUSED07       = 0x00000200ull,
-    FLAG_UNUSED08       = 0x00000400ull,
-    FLAG_UNUSED09       = 0x00000800ull,
-} VFP(WindowFlags);
+#include <vuili-types.h>
 
 /* Initialize the window context and create the window */
 void VFP(InitWindow)(const char* title, int pos_x, int pos_y, int width, int height);
@@ -52,7 +12,10 @@ void VFP(InitWindow)(const char* title, int pos_x, int pos_y, int width, int hei
 void VFP(CloseWindow)();
 
 /* Clears the drawing of the previous frame */
-void VFP(ClearFrame)(VFP(Color) color);
+void VFP(ClearFrame)();
+
+/* Set the background color */
+void VFP(SetBackgroundColor)(VFP(Color) color);
 
 /* Begin Drawing for the current frame */
 void VFP(BeginDrawing)();

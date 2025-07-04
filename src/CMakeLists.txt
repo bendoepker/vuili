@@ -7,11 +7,6 @@ if(BUILD_SHARED_LIBS)
     set_property(TARGET glfw PROPERTY C_VISIBILITY_PRESET hidden)
 endif()
 
-# Vuili Dependencies
-set(vuili_deps
-    glfw
-)
-
 # Vuili Source Files
 set(vuili_src
     vuili.c
@@ -19,9 +14,12 @@ set(vuili_src
     glad/src/gl.c
 )
 
+list(APPEND vuili_src $<TARGET_OBJECTS:glfw>)
+
 # Vuili Header Files
 set(vuili_hdr
     vuili.h
+    vuili-types.h
 )
 
 # Create the library target
@@ -43,7 +41,6 @@ if(WIN32)
 endif()
 
 # Link the library
-target_link_libraries(vuili glfw)
 if(WIN32) # TODO: Only link to winmm when needed (as of right now that is when USE_HIGH_RES_TIMER == 1)
     target_link_libraries(vuili winmm)
 endif()
@@ -55,6 +52,7 @@ target_include_directories(vuili PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/utils
     ${CMAKE_CURRENT_SOURCE_DIR}/glad/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/glfw/include
 )
 
 # Build tests

@@ -32,6 +32,16 @@
 
 /* Use Custom Vuili Function Prefix */
 #define VUILI_FUNCTION_PREFIX   1
+#undef VUILI_FUNCTION_PREFIX
+
+/*
+* #define VUILI_FUNCTION_PREFIX to enable function prefixes
+*/
+#ifdef VUILI_FUNCTION_PREFIX
+    #define VFP(x) V_##x
+#else
+    #define VFP(x) x
+#endif
 
 #define MAX_VIEWPORTS           64
 #define MAX_WINDOWS             8

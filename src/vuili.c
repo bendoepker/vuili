@@ -87,6 +87,13 @@ void VFP(InitWindow)(const char* title, int pos_x, int pos_y, int width, int hei
     glfwSetWindowPosCallback(_VDATA.window.window, __window_pos_callback);
     glfwSetWindowSizeCallback(_VDATA.window.window, __window_size_callback);
 
+    /* Window defaults */
+    _VDATA.window.background_color.a = 0xFF;
+    glClearColor(_VDATA.window.background_color.r / 255.f,
+                 _VDATA.window.background_color.g / 255.f,
+                 _VDATA.window.background_color.b / 255.f,
+                 _VDATA.window.background_color.a / 255.f);
+
 #if (PLATFORM == WINDOWS) && defined(USE_HIGH_RES_TIMER)
     timeBeginPeriod(1);
 #endif
@@ -102,8 +109,12 @@ void VFP(CloseWindow)() {
 #endif
 }
 
-void VFP(ClearFrame)(VFP(Color) color) {
-    //TODO: ^
+void VFP(ClearFrame)() {
+    glClear(GL_COLOR_BUFFER_BIT);
+}
+
+void VFP(SetBackgroundColor)(VFP(Color) color) {
+    
 }
 
 void VFP(BeginDrawing)() {
