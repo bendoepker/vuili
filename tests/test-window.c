@@ -1,4 +1,5 @@
 #include <vuili.h>
+#include <glad/gl.h>
 #include <log.h>
 
 int main() {
@@ -30,9 +31,8 @@ int main() {
         // Main Window Rendering Loop
 
         // Input Handling...
-        if(GetMousePosition().x > 0) {
-            ClearFrame();
-        }
+        glClearColor(.5, .5, .5, 1);
+        glClear(GL_COLOR_BUFFER_BIT);
 
         DrawFrame();
     }

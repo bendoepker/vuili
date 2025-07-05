@@ -38,6 +38,11 @@ static void __window_size_callback(GLFWwindow* window, int x, int y) {
     _VDATA.window.size.y = y;
 }
 
+static void __frame_buffer_size_callback(GLFWwindow* window, int x, int y) {
+    (void)window;
+    glViewport(0, 0, x, y);
+}
+
 static void __glfw_error_callback(int error, const char* error_text) {
     PRINT("GLFW Error: code: %d, description: %s", error, error_text);
 }
@@ -57,6 +62,7 @@ void VFP(InitWindow)(const char* title, int pos_x, int pos_y, int width, int hei
 
     /* GLFW OpenGL hints */
     /* NOTE: We are using our own generated Glad files so we can use 4.6 */
+    glfwDefaultWindowHints();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
@@ -86,6 +92,7 @@ void VFP(InitWindow)(const char* title, int pos_x, int pos_y, int width, int hei
     glfwSetWindowCloseCallback(_VDATA.window.window, __window_close_callback);
     glfwSetWindowPosCallback(_VDATA.window.window, __window_pos_callback);
     glfwSetWindowSizeCallback(_VDATA.window.window, __window_size_callback);
+    glfwSetFramebufferSizeCallback(_VDATA.window.window, __frame_buffer_size_callback);
 
     /* Window defaults */
     _VDATA.window.background_color.a = 0xFF;
@@ -114,7 +121,12 @@ void VFP(ClearFrame)() {
 }
 
 void VFP(SetBackgroundColor)(VFP(Color) color) {
-    
+    _VDATA.window.background_color = color;
+    glClearColor(_VDATA.window.background_color.r / 255.f,
+                 _VDATA.window.background_color.g / 255.f,
+                 _VDATA.window.background_color.b / 255.f,
+                 _VDATA.window.background_color.a / 255.f
+                 );
 }
 
 void VFP(BeginDrawing)() {
@@ -128,7 +140,7 @@ void VFP(BeginDrawing)() {
 void VFP(EndDrawing)() {
     _VDATA.window.drawing = false;
     glfwPollEvents();
-    VFP(SwapBuffers)();
+    VFP(SwapFrameBuffers)();
 
     /* Partial busy sleep until next frame */
     if(_VDATA.window.max_frame_time != 0) {
@@ -140,12 +152,13 @@ void VFP(EndDrawing)() {
     }
 }
 
-void VFP(SwapBuffers)() {
+void VFP(SwapFrameBuffers)() {
     glfwSwapBuffers(_VDATA.window.window);
 }
 
 void VFP(DrawFrame)() {
     /* Viewport Walking */
+    //VFP(ClearFrame)();
 
     glfwPollEvents();
 
@@ -262,7 +275,7 @@ VFP(Vec2) VFP(GetWindowPos)() {
     };
 }
 
-void VFP(SetWindowPos)(int x, int y) {
+void VFP(SetWindowPosition)(int x, int y) {
     glfwSetWindowPos(_VDATA.window.window, x, y);
 }
 
@@ -293,13 +306,4 @@ VFP(Vec2) VFP(GetMousePosition)() {
     glfwGetCursorPos(_VDATA.window.window, &x, &y);
 
     return (VFP(Vec2)){ .x = x, .y = y };
-}
-
-VFP(Rect) VFP(GetWindowRect)() {
-    return (VFP(Rect)) {
-        .x = _VDATA.window.position.x,
-        .y = _VDATA.window.position.y,
-        .width = _VDATA.window.size.x,
-        .height = _VDATA.window.size.y
-    };
 }

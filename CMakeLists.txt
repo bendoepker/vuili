@@ -20,3 +20,9 @@ include(CMakeOutputDirectory)
 
 # Setup the library
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+# Build tests
+if(${build_tests})
+    message(STATUS "Building test projects")
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/tests)
+endif()

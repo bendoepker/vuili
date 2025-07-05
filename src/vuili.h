@@ -24,7 +24,7 @@ void VFP(BeginDrawing)();
 void VFP(EndDrawing)();
 
 /* Swap Frame Buffers (must not be currently drawing to the frame)*/
-void VFP(SwapBuffers)();
+void VFP(SwapFrameBuffers)();
 
 /* Retained mode drawing */
 void VFP(DrawFrame)();
@@ -69,7 +69,7 @@ void VFP(SetWindowShouldClose)();
 VFP(Vec2) VFP(GetWindowPos)();
 
 /* Set the window position in screen space */
-void VFP(SetWindowPos)(int x, int y);
+void VFP(SetWindowPosition)(int x, int y);
 
 /* Get the window size */
 VFP(Vec2) VFP(GetWindowSize)();
@@ -82,8 +82,5 @@ VFP(Vec2) VFP(GetMousePositionAbsolute)();
 
 /* Get the position of the mouse in relation to the top left of the window */
 VFP(Vec2) VFP(GetMousePosition)();
-
-/* Get the drawable rectangle of the main window */
-VFP(Rect) VFP(GetWindowRect)();
 
 #endif //_VUILI_H

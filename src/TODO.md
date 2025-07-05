@@ -4,6 +4,12 @@
 
 <br/>
 
+## BREAKING / ASAP
+
+- Fix OpenGL rendering
+
+<br/>
+
 ## Library Utilities
 
 - Error Handling
@@ -31,7 +37,6 @@
     - GetWindowPos() ✓
     - SetWindowPos() ✓
     - SetWindowFramerate() ✓
-    - GetWindowRect ✓
 
     - ClearBackground() ✗
     - MaximizeWindow() ✗

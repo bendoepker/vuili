@@ -54,9 +54,3 @@ target_include_directories(vuili PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/glad/include
     ${CMAKE_CURRENT_SOURCE_DIR}/glfw/include
 )
-
-# Build tests
-if(${build_tests})
-    message(STATUS "Building test projects")
-    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/tests)
-endif()
