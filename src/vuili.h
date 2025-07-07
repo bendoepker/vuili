@@ -5,6 +5,8 @@
 #include <stdbool.h>
 #include <vuili-types.h>
 
+void VFP(SleepX)(int milli);
+
 /* Initialize the window context and create the window */
 void VFP(InitWindow)(const char* title, int pos_x, int pos_y, int width, int height);
 
@@ -50,14 +52,23 @@ void VFP(ToggleFullscreen)();
 /* Toggle flags for the window without applying them (Useful before initializing the window) */
 void VFP(ToggleWindowFlags)(int flags);
 
-/* Toggle and apply the flags to the window */
+/* Apply the flags to the window */
+void VFP(ApplyWindowFlags)();
+
+/* Toggle and apply flags to a window */
 void VFP(ChangeWindowFlags)(int flags);
+
+/* Get the window flags currently toggled for the window  */
+size_t VFP(GetWindowFlags)();
 
 /* Set the window title */
 void VFP(SetWindowTitle)(const char* title);
 
 /* Set the max framerate for the window */
 void VFP(SetWindowFramerate)(int framerate);
+
+/* Get the framerate that the window is rendering at (In frames / second) */
+double VFP(GetFramerate)();
 
 /* Query to see if the window should close */
 bool VFP(WindowShouldClose)();

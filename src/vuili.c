@@ -15,6 +15,10 @@
 
 VuiliData _VDATA = {0};
 
+void VFP(SleepX)(int milli) {
+    Sleep(milli);
+}
+
 char VuiliErrorText[128] = {0};
 static void __v_set_error_text(const char* const text, int n) {
     memset(VuiliErrorText, 0, 128);
@@ -40,7 +44,9 @@ static void __window_size_callback(GLFWwindow* window, int x, int y) {
 
 static void __frame_buffer_size_callback(GLFWwindow* window, int x, int y) {
     (void)window;
-    glViewport(0, 0, x, y);
+    int width, height;
+    glfwGetFramebufferSize(_VDATA.window.window, &width, &height);
+    glViewport(0, 0, width, height);
 }
 
 static void __glfw_error_callback(int error, const char* error_text) {
@@ -54,13 +60,13 @@ void VFP(InitWindow)(const char* title, int pos_x, int pos_y, int width, int hei
     /* Initialize the GLFW Library */
     if(!glfwInit()) {
         /* GLFW Failed to Initialize, Panic! */
-        //assert(1 && "Failed to initialize GLFW!!!");
+        //assert(0 && "Failed to initialize GLFW!!!");
         __v_set_error_text("Failed to initialize GLFW", 26);
         return;
     }
     glfwSetErrorCallback(__glfw_error_callback);
 
-    /* GLFW OpenGL hints */
+    /* GLFW / OpenGL hints */
     /* NOTE: We are using our own generated Glad files so we can use 4.6 */
     glfwDefaultWindowHints();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
@@ -68,6 +74,32 @@ void VFP(InitWindow)(const char* title, int pos_x, int pos_y, int width, int hei
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
+    /* SECTION: Apply window creation flags */
+    /* These must be toggled before the window creation and has no effect otherwise */
+    if(_VDATA.window.flags & WINDOW_RESIZABLE) {
+        glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
+    } else {
+        glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+    }
+
+    if(_VDATA.window.flags & WINDOW_UNFOCUSED) {
+        glfwWindowHint(GLFW_FOCUSED, GLFW_FALSE);
+    } else {
+        glfwWindowHint(GLFW_FOCUSED, GLFW_TRUE);
+    }
+
+    if(_VDATA.window.flags & TRANSPARENT_CLIENT) {
+        glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, GLFW_TRUE);
+    }
+
+    if(_VDATA.window.flags & CUSTOM_TITLEBAR) {
+        assert(0 && "TODO: CUSTOM_TITLEBAR flag needs implemented");
+        //TODO:
+        glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
+    }
+
+
+    /* SECTION: Window Creation */
     _VDATA.window.window = glfwCreateWindow(width, height, title, NULL, NULL);
     if(!_VDATA.window.window) {
         /* GLFW failed to create the window, abort the program */
@@ -96,6 +128,7 @@ void VFP(InitWindow)(const char* title, int pos_x, int pos_y, int width, int hei
 
     /* Window defaults */
     _VDATA.window.background_color.a = 0xFF;
+    glViewport(0, 0, width, height);
     glClearColor(_VDATA.window.background_color.r / 255.f,
                  _VDATA.window.background_color.g / 255.f,
                  _VDATA.window.background_color.b / 255.f,
@@ -103,7 +136,13 @@ void VFP(InitWindow)(const char* title, int pos_x, int pos_y, int width, int hei
 
 #if (PLATFORM == WINDOWS) && defined(USE_HIGH_RES_TIMER)
     timeBeginPeriod(1);
+
+    TIMECAPS tc = {0};
+    timeGetDevCaps(&tc, sizeof(tc));
+    _VDATA.window.timer_resolution = tc.wPeriodMin / 1000.;
 #endif
+
+    __v_set_error_text("", 1);
 }
 
 void VFP(CloseWindow)() {
@@ -117,23 +156,23 @@ void VFP(CloseWindow)() {
 }
 
 void VFP(ClearFrame)() {
-    glClear(GL_COLOR_BUFFER_BIT);
-}
-
-void VFP(SetBackgroundColor)(VFP(Color) color) {
-    _VDATA.window.background_color = color;
     glClearColor(_VDATA.window.background_color.r / 255.f,
                  _VDATA.window.background_color.g / 255.f,
                  _VDATA.window.background_color.b / 255.f,
                  _VDATA.window.background_color.a / 255.f
                  );
+    glClear(GL_COLOR_BUFFER_BIT);
+}
+
+void VFP(SetBackgroundColor)(VFP(Color) color) {
+    _VDATA.window.background_color = color;
 }
 
 void VFP(BeginDrawing)() {
     _VDATA.window.drawing = true;
 
     /* Reset the frame timer */
-    if(_VDATA.window.max_frame_time != 0)
+    if(_VDATA.window.min_frame_time != 0)
         glfwSetTime(0);
 }
 
@@ -143,9 +182,9 @@ void VFP(EndDrawing)() {
     VFP(SwapFrameBuffers)();
 
     /* Partial busy sleep until next frame */
-    if(_VDATA.window.max_frame_time != 0) {
+    if(_VDATA.window.min_frame_time != 0) {
         for(;;) {
-            if(glfwGetTime() > _VDATA.window.max_frame_time)
+            if(glfwGetTime() > _VDATA.window.min_frame_time)
                 break;
             else Sleep(1); /* NOTE: USE_HIGH_RES_TIMER will increase this accuracy on windows */
         }
@@ -158,18 +197,21 @@ void VFP(SwapFrameBuffers)() {
 
 void VFP(DrawFrame)() {
     /* Viewport Walking */
-    //VFP(ClearFrame)();
+    VFP(ClearFrame)();
 
     glfwPollEvents();
+    VFP(SwapFrameBuffers)();
 
     /* Partial busy sleep until next frame */
-    if(_VDATA.window.max_frame_time != 0) {
+    if(_VDATA.window.min_frame_time != 0) {
         for(;;) {
-            if(glfwGetTime() > _VDATA.window.max_frame_time)
+            if(glfwGetTime() + _VDATA.window.timer_resolution > _VDATA.window.min_frame_time)
                 break;
             else Sleep(1); /* NOTE: USE_HIGH_RES_TIMER will increase this accuracy on windows */
         }
     }
+    _VDATA.window.last_frame_time = glfwGetTime();
+    glfwSetTime(0);
 }
 
 const char* VFP(GetLastErrorText)() {
@@ -236,24 +278,60 @@ void VFP(UnsetMinWindowSize)() {
 }
 
 void VFP(ToggleFullscreen)() {
-    //TODO:
+    ChangeWindowFlags(WINDOW_FULLSCREEN);
+}
+
+void VFP(SetWindowFramerate)(int framerate) {
+    if(framerate == 0)
+        _VDATA.window.min_frame_time = 0;
+    else
+        _VDATA.window.min_frame_time = 1.f / framerate; /* Time in milliseconds */
+}
+
+double VFP(GetFramerate)() {
+    return 1. / _VDATA.window.last_frame_time;
 }
 
 void VFP(ToggleWindowFlags)(int flags) {
     _VDATA.window.flags ^= flags;
 }
 
-void VFP(SetWindowFramerate)(int framerate) {
-    if(framerate == 0)
-        _VDATA.window.max_frame_time = 0;
-    else
-        _VDATA.window.max_frame_time = 1.f / framerate; /* Time in milliseconds */
+// NOTE: This will toggle the flags in _VDATA then set it in GLFW
+void VFP(ApplyWindowFlags)() {
+
+    if(_VDATA.window.window == NULL) {
+        __v_set_error_text("Cannot set window flags before the window is created, use ToggleWindowFlags() instead", 86);
+        return;
+    }
+
+    /* WINDOW_FULLSCREEN */
+    if(_VDATA.window.flags & WINDOW_FULLSCREEN) {
+        assert(0 && "Needs implemented");
+        if(!_VDATA.window.fullscreen){
+            GLFWmonitor* monitor = glfwGetWindowMonitor(_VDATA.window.window);
+            const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+            glfwSetWindowMonitor(_VDATA.window.window, monitor, 0, 0, mode->width, mode->height, GLFW_DONT_CARE);
+            _VDATA.window.fullscreen = true;
+        }
+    } else {
+        if(_VDATA.window.fullscreen) {
+            assert(0 && "Needs implemented");
+            GLFWmonitor* monitor = glfwGetWindowMonitor(_VDATA.window.window);
+
+            _VDATA.window.fullscreen = false;
+        }
+    }
+
 }
 
-// NOTE: This will toggle the flags in _VDATA then set it in GLFW
+size_t VFP(GetWindowFlags)() {
+    /* NOTE: Some window flags might not be applied if they haven't been applied */
+    return _VDATA.window.flags;
+}
+
 void VFP(ChangeWindowFlags)(int flags) {
     VFP(ToggleWindowFlags)(flags);
-    //TODO: Set the flags in GLFW
+    VFP(ApplyWindowFlags)();
 }
 
 void VFP(SetWindowTitle)(const char* title) {

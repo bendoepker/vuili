@@ -6,7 +6,7 @@
 
 ## BREAKING / ASAP
 
-- Fix OpenGL rendering
+- 
 
 <br/>
 
@@ -23,7 +23,6 @@
 - Window Context
     - GetWindowSize() ✓
     - SetWindowSize() ✓
-    - InitWindow() ✓
     - CloseWindow() ✓
     - WindowShouldClose() ✓
     - SetWindowShouldClose() ✓
@@ -33,18 +32,34 @@
     - UnsetMinWindowSize() ✓
     - UnsetMaxWindowSize() ✓
     - ToggleWindowFlags() ✓
+    - ChangeWindowFlags() ✓ (Pending ApplyWindowFlags())
+    - GetWindowFlags() ✓
     - SetWindowTitle() ✓
     - GetWindowPos() ✓
     - SetWindowPos() ✓
     - SetWindowFramerate() ✓
+    - GetFramerate() ✓
 
+    - InitWindow() ✗ (Partial)
+        - Window Creation Flags
+            - WINDOW_RESIZEABLE ✓
+            - TRANSPARENT_CLIENT ✓
+            - CUSTOM_TITLEBAR ✗
+            - WINDOW_UNFOCUSED ✓
+    - ApplyWindowFlags() ✗
+        - WINDOW_FULLSCREEN ✗ (Not prioritized)
+        - WINDOW_MAXIMIZED ✗
+        - WINDOW_MINIMIZED ✗
     - ClearBackground() ✗
     - MaximizeWindow() ✗
     - MinimizeWindow() ✗
     - ToggleFullscreen() ✗
-    - ChangeWindowFlags() ✗
-    - BeginDrawing() ✗ (Partial)
-    - EndDrawing() ✗ (Partial)
+    - Immediate mode functions
+        - I would like to stray away from an immediate mode GUI at the moment
+        - BeginDrawing() ✗ (Partial)
+        - EndDrawing() ✗ (Partial)
+    - DrawFrame() ✗ (Partial)
+        - Timing functions improvement to get more accurate framerate (Not prioritized, its accurate enough)
     - Viewports ✗
         - Retained Mode Drawing ✗
         - Framework

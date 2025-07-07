@@ -36,6 +36,11 @@ typedef Size Position;
     #if defined(USE_HIGH_RES_TIMER)
         __declspec(dllimport) unsigned int timeBeginPeriod(unsigned int uPeriod);
         __declspec(dllimport) unsigned int timeEndPeriod(unsigned int uPeriod);
+        typedef struct timecaps_tag {
+            unsigned int wPeriodMin;
+            unsigned int wPeriodMax;
+        } TIMECAPS, *PTIMECAPS, *NPTIMECAPS, *LPTIMECAPS;
+        __declspec(dllimport) unsigned int timeGetDevCaps(LPTIMECAPS ptc, unsigned int cbtc);
     #endif
 #elif defined(__linux__)
     //TODO: Sleep function for linux
@@ -48,22 +53,24 @@ typedef Size Position;
 /* Global Variable (hidden from library user) */
 typedef struct VuiliData {
     struct {
-        Size min_size;                      //Minimum size the window can be
-        Size max_size;                      //Maximum size the window can be
-        Size size;                          //Current size of the window
+        Size min_size;                                  //Minimum size the window can be
+        Size max_size;                                  //Maximum size the window can be
+        Size size;                                      //Current size of the window
         Position position;
-        i64 flags;
-        bool maximized, minimized;          //Window is maximized / minimized
-        bool should_close;                  //Should the window close
+        u64 flags;
+        bool maximized, minimized, fullscreen;          //Window is maximized / minimized / fullscreen
+        bool should_close;                              //Should the window close
         bool drawing;
-        double max_frame_time;
-        VFP(Color) background_color;
-        GLFWwindow* window;                 //Pointer to the GLFW window
+        double timer_resolution;                        //The timer resolution of the system (Windows)
+        double min_frame_time;                          //Minimum frame time that a frame can take to render
+        double last_frame_time;                         //Time that the last frame took to render
+        VFP(Color) background_color;                    //Color painted on the background by glClear
+        GLFWwindow* window;                             //Pointer to the GLFW window
     } window;
     struct {
-        Size mouse_pos;                     //Mouse position in relation to main window
-        Size mouse_pos_abs;                 //Mouse position in relation to desktop
-        InputState mouse_state;             //Mouse state
+        Size mouse_pos;                                 //Mouse position in relation to main window
+        Size mouse_pos_abs;                             //Mouse position in relation to desktop
+        InputState mouse_state;                         //Mouse state
 
         //TODO: Keyboard input handling
     } input;

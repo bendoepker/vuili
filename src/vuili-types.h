@@ -19,19 +19,27 @@ typedef struct { VFP(Vec2) v1, v2, v3; } VFP(Tri);
 typedef struct { float x1, y1, x2, y2; } VFP(Line);
 
 typedef enum {
-    //TODO:
-    WINDOW_RESIZABLE    = 0x00000001ull,
-    WINDOW_FULLSCREEN   = 0x00000002ull,
-    FLAG_UNUSED00       = 0x00000004ull,
-    FLAG_UNUSED01       = 0x00000008ull,
-    FLAG_UNUSED02       = 0x00000010ull,
-    FLAG_UNUSED03       = 0x00000020ull,
-    FLAG_UNUSED04       = 0x00000040ull,
+    /* NOTE: These must be set before window creation */
+    WINDOW_RESIZABLE    = 0x00000001ull,    //Window will be resizeable in windowed mode
+    WINDOW_UNFOCUSED    = 0x00000002ull,    //Window will be unfocused on opening           //TODO:
+    TRANSPARENT_CLIENT  = 0x00000004ull,    //Client area will be transparent,              //TODO:
+    CUSTOM_TITLEBAR     = 0x00000008ull,    //Window will have a customizable title bar     //TODO:
+
+    /* NOTE: These can be changed at any point */
+    WINDOW_FULLSCREEN   = 0x00000010ull,    //Window will be set to fullscreen              //TODO:
+    WINDOW_MAXIMIZED    = 0x00000020ull,    //Window will be maximized on opening           //TODO:
+    WINDOW_MINIMIZED    = 0x00000040ull,    //Window will be minimized on opening           //TODO:
+
+    /* Reserved flags */
     FLAG_UNUSED05       = 0x00000080ull,
     FLAG_UNUSED06       = 0x00000100ull,
     FLAG_UNUSED07       = 0x00000200ull,
     FLAG_UNUSED08       = 0x00000400ull,
     FLAG_UNUSED09       = 0x00000800ull,
+    FLAG_UNUSED10       = 0x00001000ull,
+    FLAG_UNUSED11       = 0x00002000ull,
+    FLAG_UNUSED12       = 0x00004000ull,
+    FLAG_UNUSED13       = 0x00008000ull,
 } VFP(WindowFlags);
 
 //Key codes align with GLFW key codes
