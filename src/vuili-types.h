@@ -21,8 +21,8 @@ typedef struct { float x1, y1, x2, y2; } VFP(Line);
 typedef enum {
     /* NOTE: These must be set before window creation */
     WINDOW_RESIZABLE    = 0x00000001ull,    //Window will be resizeable in windowed mode
-    WINDOW_UNFOCUSED    = 0x00000002ull,    //Window will be unfocused on opening           //TODO:
-    TRANSPARENT_CLIENT  = 0x00000004ull,    //Client area will be transparent,              //TODO:
+    WINDOW_UNFOCUSED    = 0x00000002ull,    //Window will be unfocused on opening
+    TRANSPARENT_CLIENT  = 0x00000004ull,    //Client area will be transparent,
     CUSTOM_TITLEBAR     = 0x00000008ull,    //Window will have a customizable title bar     //TODO:
 
     /* NOTE: These can be changed at any point */
