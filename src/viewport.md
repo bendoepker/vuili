@@ -28,11 +28,21 @@ Main window:
 
 Static viewport:
  - Not dockable / undockable (Cannot create its own window)
- - Can be undocked from a grandparent's viewport if its parent is undocked from it
+ - The exception is that it follows its parent viewport's window (The parent viewport can still be undocked)
 
 Dockable Viewport (Dynamic Viewport)
  - Variably docked / undocked from the main window
  - Will be closeable (when closed as an undocked window it will become 'hidden' and 'docked')
+
+Viewport Object
+- Window*: Pointer to the window that contains it, if null then it is in its parent's window
+- Size (Vec2)
+- Minimum Size  (Vec2)
+- Maximum Size  (Vec2)
+- Position      (Vec2)
+- Input
+    - Keyboard
+    - Mouse
 
 <br/>
 
@@ -45,22 +55,21 @@ int main() {
     int viewport_id = RegisterViewPort(DOCKABLE_VIEWPORT, parent_viewport)
 
     while(!WindowShouldClose()) {
-        //Frame setup code...Parse Inputs? Automatic State Change?
-        DoSomethingEveryFrameBeforeDrawing();
-
-        //Beginning of the usual raylib api...
-        BeginDrawing();
-
-        //Main viewport drawing in here
-        DrawRectangle(SomeStuff, MoreStuff, RED);
-
         //Goes through each viewport and draws them whether they are docked or not
-        DrawViewports();
+        DrawFrame();
+    }
 
-        //Swap buffers for each of the windows and poll events for each window
-        //This will work slightly differently from the way raylib typically works
-        //as it will encompass all of the undocked windows as well as the main window
-        EndDrawing();
+    void DrawFrame() {
+        /* Poll Input events from the OS */
+        PollEvents();
+
+        /* Pass off events to the correct viewport */
+        HandleEvents();
+
+        /* Update state within the current viewport */
+        /* This could mean changing internal values, render params, etc */
+        UpdateState();
+
     }
 }
 ```

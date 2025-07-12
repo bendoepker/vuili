@@ -50,6 +50,35 @@ typedef Size Position;
     #error Sleep function undefined for MacOS (internal.h)
 #endif
 
+typedef struct {
+    VFP(ViewportID) id;                             //ID of this viewport
+    VFP(ViewportID) parent;                         //Viewport ID of the parent viewport
+    VFP(unsigned int) num_children;                 //Number of direct children of this viewport
+    VFP(ViewportID) children[MAX_CHILD_VIEWPORTS];  //Viewport IDs of the direct children of this viewport
+    VFP(ViewportType) type;                         //Viewport Type
+    VFP(ViewportAxis) axis;                         //Render flow of the viewport
+    VFP(ViewportAffinity) affinity;                 //Affinity to the parent viewport
+
+    struct {
+        GLFWwindow* window;                         //Pointer to the window containing this viewport, null if not undocked
+        Size min_size;
+        Size max_size;
+        Size size;
+        Position position;
+        VFP(Color) background_color;
+    } window;
+
+    struct {
+        struct {
+            Position mouse_pos;
+            VFP(InputState) mouse_state;
+        } mouse;
+        struct {
+
+        } keyboard;
+    } input;
+} VFP(Viewport);
+
 /* Global Variable (hidden from library user) */
 typedef struct VuiliData {
     struct {
@@ -67,12 +96,21 @@ typedef struct VuiliData {
         VFP(Color) background_color;                    //Color painted on the background by glClear
         GLFWwindow* window;                             //Pointer to the GLFW window
     } window;
-    struct {
-        Size mouse_pos;                                 //Mouse position in relation to main window
-        Size mouse_pos_abs;                             //Mouse position in relation to desktop
-        InputState mouse_state;                         //Mouse state
 
-        //TODO: Keyboard input handling
+    /* It must be assured that there are no holes in this array if any viewports are removed */
+    int num_viewports;                                  //Number of viewports registered
+    VFP(Viewport)* viewports[MAX_VIEWPORTS];            //Array of viewports
+
+    struct {
+        /* Mouse Input */
+        Position mouse_pos;                             //Mouse position in relation to main window
+        Position mouse_pos_abs;                         //Mouse position in relation to desktop
+        VFP(KeyboardInput) fullscreen_key;              //Key that toggles fullscreen
+
+        /* Keyboard Input */
+        VFP(KeyboardInput) last_key;
+        bool last_key_double_pressed;
+        double last_key_time;
     } input;
 } VuiliData;
 

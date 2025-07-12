@@ -14,8 +14,8 @@ typedef struct { unsigned char r, g, b, a; } VFP(Color);
 #define WHITE (VFP(Color)){ 0xFF, 0xFF, 0xFF, 0xFF }
 
 /* Vuili Shape Types */
-typedef struct { float x, y, width, height; } VFP(Rect);
-typedef struct { VFP(Vec2) v1, v2, v3; } VFP(Tri);
+typedef struct { float x, y, width, height; } VFP(Rectangle);
+typedef struct { VFP(Vec2) v1, v2, v3; } VFP(Triangle);
 typedef struct { float x1, y1, x2, y2; } VFP(Line);
 
 typedef enum {
@@ -24,11 +24,9 @@ typedef enum {
     WINDOW_UNFOCUSED    = 0x00000002ull,    //Window will be unfocused on opening
     TRANSPARENT_CLIENT  = 0x00000004ull,    //Client area will be transparent,
     CUSTOM_TITLEBAR     = 0x00000008ull,    //Window will have a customizable title bar     //TODO:
-
-    /* NOTE: These can be changed at any point */
     WINDOW_FULLSCREEN   = 0x00000010ull,    //Window will be set to fullscreen              //TODO:
-    WINDOW_MAXIMIZED    = 0x00000020ull,    //Window will be maximized on opening           //TODO:
-    WINDOW_MINIMIZED    = 0x00000040ull,    //Window will be minimized on opening           //TODO:
+    WINDOW_MAXIMIZED    = 0x00000020ull,    //Window will be maximized on opening
+    WINDOW_MINIMIZED    = 0x00000040ull,    //Window will be minimized on opening
 
     /* Reserved flags */
     FLAG_UNUSED05       = 0x00000080ull,
@@ -44,150 +42,183 @@ typedef enum {
 
 //Key codes align with GLFW key codes
 typedef enum {
-    V_KEY_SPACE            = 32,
-    V_KEY_APOSTROPHE       = 39, /* ' */
-    V_KEY_COMMA            = 44, /* , */
-    V_KEY_MINUS            = 45, /* - */
-    V_KEY_PERIOD           = 46, /* . */
-    V_KEY_SLASH            = 47, /* / */
-    V_KEY_0                = 48,
-    V_KEY_1                = 49,
-    V_KEY_2                = 50,
-    V_KEY_3                = 51,
-    V_KEY_4                = 52,
-    V_KEY_5                = 53,
-    V_KEY_6                = 54,
-    V_KEY_7                = 55,
-    V_KEY_8                = 56,
-    V_KEY_9                = 57,
-    V_KEY_SEMICOLON        = 59, /* ; */
-    V_KEY_EQUAL            = 61, /* = */
-    V_KEY_A                = 65,
-    V_KEY_B                = 66,
-    V_KEY_C                = 67,
-    V_KEY_D                = 68,
-    V_KEY_E                = 69,
-    V_KEY_F                = 70,
-    V_KEY_G                = 71,
-    V_KEY_H                = 72,
-    V_KEY_I                = 73,
-    V_KEY_J                = 74,
-    V_KEY_K                = 75,
-    V_KEY_L                = 76,
-    V_KEY_M                = 77,
-    V_KEY_N                = 78,
-    V_KEY_O                = 79,
-    V_KEY_P                = 80,
-    V_KEY_Q                = 81,
-    V_KEY_R                = 82,
-    V_KEY_S                = 83,
-    V_KEY_T                = 84,
-    V_KEY_U                = 85,
-    V_KEY_V                = 86,
-    V_KEY_W                = 87,
-    V_KEY_X                = 88,
-    V_KEY_Y                = 89,
-    V_KEY_Z                = 90,
-    V_KEY_LEFT_BRACKET     = 91, /* [ */
-    V_KEY_BACKSLASH        = 92, /* \ */
-    V_KEY_RIGHT_BRACKET    = 93, /* ] */
-    V_KEY_GRAVE_ACCENT     = 96, /* ` */
-    V_KEY_WORLD_1          = 161, /* non-US #1 */
-    V_KEY_WORLD_2          = 162, /* non-US #2 */
+    VFP(KEY_NONE)           = 0,
+    VFP(KEY_SPACE)          = 32,
+    VFP(KEY_APOSTROPHE)     = 39, /* ' */
+    VFP(KEY_COMMA)          = 44, /* , */
+    VFP(KEY_MINUS)          = 45, /* - */
+    VFP(KEY_PERIOD)         = 46, /* . */
+    VFP(KEY_SLASH)          = 47, /* / */
+    VFP(KEY_0)              = 48,
+    VFP(KEY_1)              = 49,
+    VFP(KEY_2)              = 50,
+    VFP(KEY_3)              = 51,
+    VFP(KEY_4)              = 52,
+    VFP(KEY_5)              = 53,
+    VFP(KEY_6)              = 54,
+    VFP(KEY_7)              = 55,
+    VFP(KEY_8)              = 56,
+    VFP(KEY_9)              = 57,
+    VFP(KEY_SEMICOLON)      = 59, /* ; */
+    VFP(KEY_EQUAL)          = 61, /* = */
+    VFP(KEY_A)              = 65,
+    VFP(KEY_B)              = 66,
+    VFP(KEY_C)              = 67,
+    VFP(KEY_D)              = 68,
+    VFP(KEY_E)              = 69,
+    VFP(KEY_F)              = 70,
+    VFP(KEY_G)              = 71,
+    VFP(KEY_H)              = 72,
+    VFP(KEY_I)              = 73,
+    VFP(KEY_J)              = 74,
+    VFP(KEY_K)              = 75,
+    VFP(KEY_L)              = 76,
+    VFP(KEY_M)              = 77,
+    VFP(KEY_N)              = 78,
+    VFP(KEY_O)              = 79,
+    VFP(KEY_P)              = 80,
+    VFP(KEY_Q)              = 81,
+    VFP(KEY_R)              = 82,
+    VFP(KEY_S)              = 83,
+    VFP(KEY_T)              = 84,
+    VFP(KEY_U)              = 85,
+    VFP(KEY_V)              = 86,
+    VFP(KEY_W)              = 87,
+    VFP(KEY_X)              = 88,
+    VFP(KEY_Y)              = 89,
+    VFP(KEY_Z)              = 90,
+    VFP(KEY_LEFT_BRACKET)   = 91, /* [ */
+    VFP(KEY_BACKSLASH)      = 92, /* \ */
+    VFP(KEY_RIGHT_BRACKET)  = 93, /* ] */
+    VFP(KEY_GRAVE_ACCENT)   = 96, /* ` */
+    VFP(KEY_WORLD_1)        = 161, /* non-US #1 */
+    VFP(KEY_WORLD_2)        = 162, /* non-US #2 */
 
     /* Function keys */
-    V_KEY_ESCAPE           = 256,
-    V_KEY_ENTER            = 257,
-    V_KEY_TAB              = 258,
-    V_KEY_BACKSPACE        = 259,
-    V_KEY_INSERT           = 260,
-    V_KEY_DELETE           = 261,
-    V_KEY_RIGHT            = 262,
-    V_KEY_LEFT             = 263,
-    V_KEY_DOWN             = 264,
-    V_KEY_UP               = 265,
-    V_KEY_PAGE_UP          = 266,
-    V_KEY_PAGE_DOWN        = 267,
-    V_KEY_HOME             = 268,
-    V_KEY_END              = 269,
-    V_KEY_CAPS_LOCK        = 280,
-    V_KEY_SCROLL_LOCK      = 281,
-    V_KEY_NUM_LOCK         = 282,
-    V_KEY_PRINT_SCREEN     = 283,
-    V_KEY_PAUSE            = 284,
-    V_KEY_F1               = 290,
-    V_KEY_F2               = 291,
-    V_KEY_F3               = 292,
-    V_KEY_F4               = 293,
-    V_KEY_F5               = 294,
-    V_KEY_F6               = 295,
-    V_KEY_F7               = 296,
-    V_KEY_F8               = 297,
-    V_KEY_F9               = 298,
-    V_KEY_F10              = 299,
-    V_KEY_F11              = 300,
-    V_KEY_F12              = 301,
-    V_KEY_F13              = 302,
-    V_KEY_F14              = 303,
-    V_KEY_F15              = 304,
-    V_KEY_F16              = 305,
-    V_KEY_F17              = 306,
-    V_KEY_F18              = 307,
-    V_KEY_F19              = 308,
-    V_KEY_F20              = 309,
-    V_KEY_F21              = 310,
-    V_KEY_F22              = 311,
-    V_KEY_F23              = 312,
-    V_KEY_F24              = 313,
-    V_KEY_F25              = 314,
-    V_KEY_KP_0             = 320,
-    V_KEY_KP_1             = 321,
-    V_KEY_KP_2             = 322,
-    V_KEY_KP_3             = 323,
-    V_KEY_KP_4             = 324,
-    V_KEY_KP_5             = 325,
-    V_KEY_KP_6             = 326,
-    V_KEY_KP_7             = 327,
-    V_KEY_KP_8             = 328,
-    V_KEY_KP_9             = 329,
-    V_KEY_KP_DECIMAL       = 330,
-    V_KEY_KP_DIVIDE        = 331,
-    V_KEY_KP_MULTIPLY      = 332,
-    V_KEY_KP_SUBTRACT      = 333,
-    V_KEY_KP_ADD           = 334,
-    V_KEY_KP_ENTER         = 335,
-    V_KEY_KP_EQUAL         = 336,
-    V_KEY_LEFT_SHIFT       = 340,
-    V_KEY_LEFT_CONTROL     = 341,
-    V_KEY_LEFT_ALT         = 342,
-    V_KEY_LEFT_SUPER       = 343,
-    V_KEY_RIGHT_SHIFT      = 344,
-    V_KEY_RIGHT_CONTROL    = 345,
-    V_KEY_RIGHT_ALT        = 346,
-    V_KEY_RIGHT_SUPER      = 347,
-    V_KEY_MENU             = 348,
-} KeyboardInput;
+    VFP(KEY_ESCAPE)         = 256,
+    VFP(KEY_ENTER)          = 257,
+    VFP(KEY_TAB)            = 258,
+    VFP(KEY_BACKSPACE)      = 259,
+    VFP(KEY_INSERT)         = 260,
+    VFP(KEY_DELETE)         = 261,
+    VFP(KEY_RIGHT)          = 262,
+    VFP(KEY_LEFT)           = 263,
+    VFP(KEY_DOWN)           = 264,
+    VFP(KEY_UP)             = 265,
+    VFP(KEY_PAGE_UP)        = 266,
+    VFP(KEY_PAGE_DOWN)      = 267,
+    VFP(KEY_HOME)           = 268,
+    VFP(KEY_END)            = 269,
+    VFP(KEY_CAPS_LOCK)      = 280,
+    VFP(KEY_SCROLL_LOCK)    = 281,
+    VFP(KEY_NUM_LOCK)       = 282,
+    VFP(KEY_PRINT_SCREEN)   = 283,
+    VFP(KEY_PAUSE)          = 284,
+    VFP(KEY_F1)             = 290,
+    VFP(KEY_F2)             = 291,
+    VFP(KEY_F3)             = 292,
+    VFP(KEY_F4)             = 293,
+    VFP(KEY_F5)             = 294,
+    VFP(KEY_F6)             = 295,
+    VFP(KEY_F7)             = 296,
+    VFP(KEY_F8)             = 297,
+    VFP(KEY_F9)             = 298,
+    VFP(KEY_F10)            = 299,
+    VFP(KEY_F11)            = 300,
+    VFP(KEY_F12)            = 301,
+    VFP(KEY_F13)            = 302,
+    VFP(KEY_F14)            = 303,
+    VFP(KEY_F15)            = 304,
+    VFP(KEY_F16)            = 305,
+    VFP(KEY_F17)            = 306,
+    VFP(KEY_F18)            = 307,
+    VFP(KEY_F19)            = 308,
+    VFP(KEY_F20)            = 309,
+    VFP(KEY_F21)            = 310,
+    VFP(KEY_F22)            = 311,
+    VFP(KEY_F23)            = 312,
+    VFP(KEY_F24)            = 313,
+    VFP(KEY_F25)            = 314,
+    VFP(KEY_KP_0)           = 320,
+    VFP(KEY_KP_1)           = 321,
+    VFP(KEY_KP_2)           = 322,
+    VFP(KEY_KP_3)           = 323,
+    VFP(KEY_KP_4)           = 324,
+    VFP(KEY_KP_5)           = 325,
+    VFP(KEY_KP_6)           = 326,
+    VFP(KEY_KP_7)           = 327,
+    VFP(KEY_KP_8)           = 328,
+    VFP(KEY_KP_9)           = 329,
+    VFP(KEY_KP_DECIMAL)     = 330,
+    VFP(KEY_KP_DIVIDE)      = 331,
+    VFP(KEY_KP_MULTIPLY)    = 332,
+    VFP(KEY_KP_SUBTRACT)    = 333,
+    VFP(KEY_KP_ADD)         = 334,
+    VFP(KEY_KP_ENTER)       = 335,
+    VFP(KEY_KP_EQUAL)       = 336,
+    VFP(KEY_LEFT_SHIFT)     = 340,
+    VFP(KEY_LEFT_CONTROL)   = 341,
+    VFP(KEY_LEFT_ALT)       = 342,
+    VFP(KEY_LEFT_SUPER)     = 343,
+    VFP(KEY_RIGHT_SHIFT)    = 344,
+    VFP(KEY_RIGHT_CONTROL)  = 345,
+    VFP(KEY_RIGHT_ALT)      = 346,
+    VFP(KEY_RIGHT_SUPER)    = 347,
+    VFP(KEY_MENU)           = 348,
+} VFP(KeyboardInput);
 
 typedef enum {
-    V_MOUSE_LEFT = 0,
-    V_MOUSE_RIGHT = 1,
-    V_MOUSE_MIDDLE = 2,
+    VFP(MOUSE_LEFT)         = 0,
+    VFP(MOUSE_RIGHT)        = 1,
+    VFP(MOUSE_MIDDLE)       = 2,
 
-    V_MOUSE_BUTTON_1 = 0,
-    V_MOUSE_BUTTON_2 = 1,
-    V_MOUSE_BUTTON_3 = 2,
-    V_MOUSE_BUTTON_4 = 3,
-    V_MOUSE_BUTTON_5 = 4,
-    V_MOUSE_BUTTON_6 = 5,
-    V_MOUSE_BUTTON_7 = 6,
-    V_MOUSE_BUTTON_8 = 7,
-} MouseInput;
+    VFP(MOUSE_BUTTON_1)     = VFP(MOUSE_LEFT),
+    VFP(MOUSE_BUTTON_2)     = VFP(MOUSE_RIGHT),
+    VFP(MOUSE_BUTTON_3)     = VFP(MOUSE_MIDDLE),
+    VFP(MOUSE_BUTTON_4)     = 3,
+    VFP(MOUSE_BUTTON_5)     = 4,
+    VFP(MOUSE_BUTTON_6)     = 5,
+    VFP(MOUSE_BUTTON_7)     = 6,
+    VFP(MOUSE_BUTTON_8)     = 7,
+} VFP(MouseInput);
 
 typedef enum {
-    V_PRESSED,
-    V_DOWN,
-    V_RELEASED,
-    V_UP,
-} InputState;
+    VFP(RELEASED)           = 0,
+    VFP(PRESSED)            = 1,
+    VFP(ALT_PRESSED)        = 2,
+    VFP(CTRL_PRESSED)       = 3,
+    VFP(SHIFT_PRESSED)      = 4,
+} VFP(InputState);
+
+/*
+*   unique ID number representing a viewport
+*   -1 refers to a NULL ID (such as the parent ID of the main viewport)
+*   0 refers to the main viewport
+*   1 <-> MAX_VIEWPORTS are children of the main viewport or recursively children of those viewports
+*/
+typedef int VFP(ViewportID);
+
+typedef enum {
+    VFP(STATIC_VIEWPORT) = 0,                //Cannot be undocked from its parent viewport
+    VFP(DYNAMIC_VIEWPORT) = 1,               //Can be undocked from its parent viewport
+    VFP(DOCKABLE_VIEWPORT) = 1,              //Same as the dynamic viewport
+    VFP(FLOATINT_VIEWPORT) = 2,              //Bound to its parent viewport's window but floating within it
+} VFP(ViewportType);
+
+typedef enum {
+    VFP(VERTICAL_AXIS) = 0,             //Child viewports are aligned from top to bottom
+    VFP(HORIZONTAL_AXIS),               //Child viewports are aligned from left to right
+    VFP(REVERSE_VERTICAL_AXIS),         //Child viewports are aligned from bottom to top
+    VFP(REVERSE_HORIZONTAL_AXIS),       //Child viewports are aligned from right to left
+} VFP(ViewportAxis);
+
+// ViewportAffinity == The side of the parent viewport that the viewport will align to
+typedef enum {
+    VFP(NO_AFFINITY) = 0,               //Viewport will not make any allignment attempts
+    VFP(TOP_AFFINITY),                  //Viewport will try to align to the top of its parent
+    VFP(RIGHT_AFFINITY),                //Viewport will try to align to the right of its parent
+    VFP(LEFT_AFFINITY),                 //Viewport will try to align to the left of its parent
+    VFP(BOTTOM_AFFINITY)                //Viewport will try to align to the bottom of its parent,
+} VFP(ViewportAffinity);
 
 #endif //_V_TYPES_H

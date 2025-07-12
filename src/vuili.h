@@ -28,6 +28,9 @@ void VFP(EndDrawing)();
 /* Swap Frame Buffers (must not be currently drawing to the frame)*/
 void VFP(SwapFrameBuffers)();
 
+/* Poll the OS for any keyboard / mouse events */
+void VFP(PollEvents)();
+
 /* Retained mode drawing */
 void VFP(DrawFrame)();
 
@@ -49,16 +52,22 @@ const char* VFP(GetLastErrorText)();
 /* Toggle the main window to fullscreen */
 void VFP(ToggleFullscreen)();
 
-/* Toggle flags for the window without applying them (Useful before initializing the window) */
+/* Set the key that will toggle fullscreen mode */
+void VFP(SetFullscreenKey)(VFP(KeyboardInput) key);
+
+/* Maximize the window */
+void VFP(MaximizeWindow)();
+
+/* Minimize the window */
+void VFP(MinimizeWindow)();
+
+/* Restore the window */
+void VFP(RestoreWindow)();
+
+/* Toggles the window flags for window creation */
 void VFP(ToggleWindowFlags)(int flags);
 
-/* Apply the flags to the window */
-void VFP(ApplyWindowFlags)();
-
-/* Toggle and apply flags to a window */
-void VFP(ChangeWindowFlags)(int flags);
-
-/* Get the window flags currently toggled for the window  */
+/* Get the window flags toggled for the window  */
 size_t VFP(GetWindowFlags)();
 
 /* Set the window title */
@@ -93,5 +102,13 @@ VFP(Vec2) VFP(GetMousePositionAbsolute)();
 
 /* Get the position of the mouse in relation to the top left of the window */
 VFP(Vec2) VFP(GetMousePosition)();
+
+/*
+*   Viewport functions
+*/
+
+VFP(ViewportID) RegisterViewport(VFP(ViewportType) type, VFP(ViewportID) parent, VFP(Rectangle) rec);
+
+void UnregisterViewport(VFP(ViewportID) id);
 
 #endif //_VUILI_H

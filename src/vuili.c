@@ -7,11 +7,15 @@
 /* Logging */
 #include <log.h>
 
-/* Memset, Strncpy */
+/* Memset, Strncpy, sprintf, strlen */
 #include <string.h>
+#include <stdio.h>
 
 /* Assert */
 #include <assert.h>
+
+/* For malloc / calloc / realloc */
+#include <stdlib.h>
 
 VuiliData _VDATA = {0};
 
@@ -19,7 +23,10 @@ void VFP(SleepX)(int milli) {
     Sleep(milli);
 }
 
+/* Global Error Text */
 char VuiliErrorText[128] = {0};
+
+/* Internal Callbacks */
 static void __v_set_error_text(const char* const text, int n) {
     memset(VuiliErrorText, 0, 128);
     strncpy(VuiliErrorText, text, n);
@@ -31,15 +38,33 @@ static void __window_close_callback(GLFWwindow* window) {
 }
 
 static void __window_pos_callback(GLFWwindow* window, int x, int y) {
-    (void)window;
+    if(glfwGetWindowMonitor(window))
+        return;
     _VDATA.window.position.x = x;
     _VDATA.window.position.y = y;
 }
 
 static void __window_size_callback(GLFWwindow* window, int x, int y) {
-    (void)window;
+    if(glfwGetWindowMonitor(window))
+        return;
     _VDATA.window.size.x = x;
     _VDATA.window.size.y = y;
+}
+
+static void __minimize_callback(GLFWwindow* window, int minimized) {
+    (void)window;
+    if(minimized)
+        _VDATA.window.minimized = true;
+    else
+        _VDATA.window.minimized = false;
+}
+
+static void __maximize_callback(GLFWwindow* window, int maximized) {
+    (void)window;
+    if(maximized)
+        _VDATA.window.maximized = true;
+    else
+        _VDATA.window.maximized = false;
 }
 
 static void __frame_buffer_size_callback(GLFWwindow* window, int x, int y) {
@@ -51,6 +76,19 @@ static void __frame_buffer_size_callback(GLFWwindow* window, int x, int y) {
 
 static void __glfw_error_callback(int error, const char* error_text) {
     PRINT("GLFW Error: code: %d, description: %s", error, error_text);
+}
+
+static void __key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+    if(key == _VDATA.input.fullscreen_key) {
+        if(action == GLFW_PRESS) {
+            ToggleFullscreen();
+            return;
+        }
+    }
+}
+
+static void __mouse_callback(GLFWwindow* window, int button, int action, int mods) {
+    (void)window;
 }
 
 void VFP(InitWindow)(const char* title, int pos_x, int pos_y, int width, int height) {
@@ -98,6 +136,15 @@ void VFP(InitWindow)(const char* title, int pos_x, int pos_y, int width, int hei
         glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
     }
 
+    if(_VDATA.window.flags & WINDOW_MAXIMIZED) {
+        glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
+    }
+
+    glfwWindowHint(GLFW_POSITION_X, pos_x);
+    glfwWindowHint(GLFW_POSITION_Y, pos_y);
+
+    if(_VDATA.input.fullscreen_key == VFP(KEY_NONE))
+        _VDATA.input.fullscreen_key = VFP(KEY_F11);
 
     /* SECTION: Window Creation */
     _VDATA.window.window = glfwCreateWindow(width, height, title, NULL, NULL);
@@ -109,7 +156,18 @@ void VFP(InitWindow)(const char* title, int pos_x, int pos_y, int width, int hei
     }
     glfwMakeContextCurrent(_VDATA.window.window); //Sync glfw to gl context
     _VDATA.window.should_close = false;
-    glfwSetWindowPos(_VDATA.window.window, pos_x, pos_y);
+
+    /* Window flags that must be applied after window creation... */
+    if(_VDATA.window.flags & WINDOW_FULLSCREEN) {
+        GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+        const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+        glfwSetWindowMonitor(_VDATA.window.window, monitor, 0, 0, mode->width, mode->height, GLFW_DONT_CARE);
+        _VDATA.window.fullscreen = true;
+    }
+
+    if(_VDATA.window.flags & WINDOW_MINIMIZED) {
+        glfwIconifyWindow(_VDATA.window.window);
+    }
 
     /* Load the GL library */
     int version_glad = gladLoadGL(glfwGetProcAddress);
@@ -118,13 +176,16 @@ void VFP(InitWindow)(const char* title, int pos_x, int pos_y, int width, int hei
         __v_set_error_text("Glad failed to load OpenGL 4.6", 31);
         return;
     }
-    PRINT("Loaded OpenGL version %i.%i", GLAD_VERSION_MAJOR(version_glad), GLAD_VERSION_MINOR(version_glad));
 
     /* Set GLFW callbacks */
     glfwSetWindowCloseCallback(_VDATA.window.window, __window_close_callback);
     glfwSetWindowPosCallback(_VDATA.window.window, __window_pos_callback);
     glfwSetWindowSizeCallback(_VDATA.window.window, __window_size_callback);
     glfwSetFramebufferSizeCallback(_VDATA.window.window, __frame_buffer_size_callback);
+    glfwSetWindowMaximizeCallback(_VDATA.window.window, __maximize_callback);
+    glfwSetWindowIconifyCallback(_VDATA.window.window, __minimize_callback);
+    glfwSetKeyCallback(_VDATA.window.window, __key_callback);
+    glfwSetMouseButtonCallback(_VDATA.window.window, __mouse_callback);
 
     /* Window defaults */
     _VDATA.window.background_color.a = 0xFF;
@@ -142,12 +203,26 @@ void VFP(InitWindow)(const char* title, int pos_x, int pos_y, int width, int hei
     _VDATA.window.timer_resolution = tc.wPeriodMin / 1000.;
 #endif
 
+    /* Set the main window viewport */
+    VFP(ViewportID) viewport_id = RegisterViewport(STATIC_VIEWPORT, -1, (VFP(Rectangle)) {.x = 0, .y = 0, .width = width, .height = height });
+    if(viewport_id != 0) {
+        /* NOTE: I don't like this being the case but for now it will have to do */
+        /* TODO: ^ */
+        __v_set_error_text("Viewports must be registered after the window creation", 55);
+        glfwDestroyWindow(_VDATA.window.window);
+        glfwTerminate();
+        return;
+    }
+
     __v_set_error_text("", 1);
 }
 
 void VFP(CloseWindow)() {
     if(_VDATA.window.window)
         glfwDestroyWindow(_VDATA.window.window);
+    for(int i = 0; i < _VDATA.num_viewports; i++) {
+        free(_VDATA.viewports[i]);
+    }
     memset(&_VDATA, 0, sizeof(_VDATA));
     glfwTerminate();
 #if (PLATFORM == WINDOWS) && defined(USE_HIGH_RES_TIMER)
@@ -195,11 +270,15 @@ void VFP(SwapFrameBuffers)() {
     glfwSwapBuffers(_VDATA.window.window);
 }
 
+void VFP(PollEvents)() {
+    glfwPollEvents();
+}
+
 void VFP(DrawFrame)() {
     /* Viewport Walking */
     VFP(ClearFrame)();
 
-    glfwPollEvents();
+    VFP(PollEvents)();
     VFP(SwapFrameBuffers)();
 
     /* Partial busy sleep until next frame */
@@ -278,7 +357,29 @@ void VFP(UnsetMinWindowSize)() {
 }
 
 void VFP(ToggleFullscreen)() {
-    ChangeWindowFlags(WINDOW_FULLSCREEN);
+    if(_VDATA.window.fullscreen) {
+        glfwSetWindowMonitor(_VDATA.window.window, NULL, _VDATA.window.position.x, _VDATA.window.position.y,
+                             _VDATA.window.size.x, _VDATA.window.size.y, GLFW_DONT_CARE);
+        _VDATA.window.fullscreen = false;
+    } else {
+        GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+        const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+        glfwSetWindowMonitor(_VDATA.window.window, monitor, 0, 0, mode->width, mode->height, GLFW_DONT_CARE);
+        _VDATA.window.fullscreen = true;
+    }
+}
+
+void VFP(SetFullscreenKey)(VFP(KeyboardInput) key) {
+    _VDATA.input.fullscreen_key = key;
+}
+
+void VFP(MaximizeWindow)() {
+    glfwMaximizeWindow(_VDATA.window.window);
+}
+
+void VFP(MinimizeWindow)() {
+    glfwIconifyWindow(_VDATA.window.window);
+    PRINT("%d", _VDATA.window.flags & WINDOW_MINIMIZED);
 }
 
 void VFP(SetWindowFramerate)(int framerate) {
@@ -296,42 +397,8 @@ void VFP(ToggleWindowFlags)(int flags) {
     _VDATA.window.flags ^= flags;
 }
 
-// NOTE: This will toggle the flags in _VDATA then set it in GLFW
-void VFP(ApplyWindowFlags)() {
-
-    if(_VDATA.window.window == NULL) {
-        __v_set_error_text("Cannot set window flags before the window is created, use ToggleWindowFlags() instead", 86);
-        return;
-    }
-
-    /* WINDOW_FULLSCREEN */
-    if(_VDATA.window.flags & WINDOW_FULLSCREEN) {
-        assert(0 && "Needs implemented");
-        if(!_VDATA.window.fullscreen){
-            GLFWmonitor* monitor = glfwGetWindowMonitor(_VDATA.window.window);
-            const GLFWvidmode* mode = glfwGetVideoMode(monitor);
-            glfwSetWindowMonitor(_VDATA.window.window, monitor, 0, 0, mode->width, mode->height, GLFW_DONT_CARE);
-            _VDATA.window.fullscreen = true;
-        }
-    } else {
-        if(_VDATA.window.fullscreen) {
-            assert(0 && "Needs implemented");
-            GLFWmonitor* monitor = glfwGetWindowMonitor(_VDATA.window.window);
-
-            _VDATA.window.fullscreen = false;
-        }
-    }
-
-}
-
 size_t VFP(GetWindowFlags)() {
-    /* NOTE: Some window flags might not be applied if they haven't been applied */
     return _VDATA.window.flags;
-}
-
-void VFP(ChangeWindowFlags)(int flags) {
-    VFP(ToggleWindowFlags)(flags);
-    VFP(ApplyWindowFlags)();
 }
 
 void VFP(SetWindowTitle)(const char* title) {
@@ -384,4 +451,121 @@ VFP(Vec2) VFP(GetMousePosition)() {
     glfwGetCursorPos(_VDATA.window.window, &x, &y);
 
     return (VFP(Vec2)){ .x = x, .y = y };
+}
+
+/*
+*   Viewport functions
+*/
+
+VFP(Viewport)* __get_viewport_pointer(VFP(ViewportID) id) {
+    //TODO: Use binary search, not linear
+    for(int i = 0; i < _VDATA.num_viewports; i++) {
+        if(_VDATA.viewports[i]->id == id)
+            return _VDATA.viewports[i];
+    }
+    return 0;
+}
+
+int __get_viewport_index(VFP(ViewportID) id) {
+    for(int i = 0; i < _VDATA.num_viewports; i++) {
+        if(_VDATA.viewports[i]->id == id)
+            return i;
+    }
+    return -1;
+}
+
+void __print_viewport_arr() {
+    PRINT("[");
+    for(int i = 0; i < MAX_VIEWPORTS; i++) {
+        VFP(ViewportID) id = 0;
+        id = _VDATA.viewports[i] ? _VDATA.viewports[i]->id : 0;
+        PRINT("\t%p : %d", _VDATA.viewports[i], id);
+    }
+    PRINT("]");
+}
+
+VFP(ViewportID) RegisterViewport(VFP(ViewportType) type, VFP(ViewportID) parent, VFP(Rectangle) rec) {
+    /* Allocation and zero setting */
+    if(_VDATA.num_viewports == MAX_VIEWPORTS) {
+        __v_set_error_text("Failed to create viewport, reached max viewports", 49);
+        return -1;
+    }
+    _VDATA.viewports[_VDATA.num_viewports] = malloc(sizeof(VFP(Viewport)));
+    if(_VDATA.viewports[_VDATA.num_viewports] == 0) {
+        __v_set_error_text("Failed to allocate memory", 26);
+        return -1;
+    }
+    VFP(Viewport)* this = _VDATA.viewports[_VDATA.num_viewports];
+    memset(this, 0, sizeof(VFP(Viewport)));
+
+    /* Set the id number and update global state */
+    if(_VDATA.num_viewports == 0) {
+        this->id = 0;
+    } else {
+        this->id = _VDATA.viewports[_VDATA.num_viewports - 1]->id + 1;
+    }
+    _VDATA.num_viewports++;
+
+    /* Set the viewport params */
+    this->window.position.x = rec.x;
+    this->window.position.y = rec.y;
+    this->window.size.x = rec.width;
+    this->window.size.y = rec.height;
+
+    this->parent = parent;
+
+    if(this->parent != -1) {
+        VFP(Viewport)* p_parent = __get_viewport_pointer(parent);
+        p_parent->children[p_parent->num_children] = this->id;
+        p_parent->num_children++;
+    }
+
+    this->type = type;
+
+    /* These are the default values (0) so they do not need to be explicitly set */
+    //this->axis = VFP(VERTICAL_AXIS);
+    //this->affinity = VFP(NO_AFFINITY);
+
+    /* Diagnostics
+    PRINT();
+    PRINT("ID: %d", this->id);
+    PRINT("Parent ID: %d", this->parent);
+    PRINT("X: %d", this->window.position.x);
+    PRINT("Y: %d", this->window.position.y);
+    PRINT("Width: %d", this->window.size.x);
+    PRINT("Height: %d", this->window.size.y);
+    PRINT("Axis: %d", this->axis);
+    PRINT("Affinity: %d", this->affinity);
+    */
+
+    __print_viewport_arr();
+    return this->id;
+}
+
+void __destroy_viewports_recursive(VFP(ViewportID) id) {
+    int this_idx = __get_viewport_index(id);
+    VFP(Viewport)* this = _VDATA.viewports[this_idx];
+
+    for(int i = 0; i < this->num_children; i++) {
+        __destroy_viewports_recursive(this->children[i]);
+    }
+
+    _VDATA.num_viewports--;
+    free(this);
+    PRINT("%d", this_idx);
+    _VDATA.viewports[this_idx] = 0;
+}
+
+void UnregisterViewport(VFP(ViewportID) id) {
+    ViewportID parent_id = __get_viewport_pointer(id)->parent;
+    __destroy_viewports_recursive(id);
+
+    /*
+    *  Child viewports are not guaranteed to be in order with their parents
+    *  so the global array must be fixed to fill the holes after they are removed
+    *
+    *  The parent's array of children must also be fixed
+    */
+    //TODO: ^
+    __print_viewport_arr();
 }

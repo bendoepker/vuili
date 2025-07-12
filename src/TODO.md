@@ -39,34 +39,36 @@
     - SetWindowPos() ✓
     - SetWindowFramerate() ✓
     - GetFramerate() ✓
-
-    - InitWindow() ✗ (Partial)
+    - MaximizeWindow() ✓
+    - MinimizeWindow() ✓
+    - ToggleFullscreen() ✓
+    - DrawFrame() ✓ (Partial)
+        - Timing functions improvement to get more accurate framerate (Not prioritized, its accurate enough)
+        - Need to render all draw calls
+    - InitWindow() ✓ (Partial)
         - Window Creation Flags
             - WINDOW_RESIZEABLE ✓
             - TRANSPARENT_CLIENT ✓
             - CUSTOM_TITLEBAR ✗
             - WINDOW_UNFOCUSED ✓
-    - ApplyWindowFlags() ✗
-        - WINDOW_FULLSCREEN ✗ (Not prioritized)
-        - WINDOW_MAXIMIZED ✗
-        - WINDOW_MINIMIZED ✗
-    - ClearBackground() ✗
-    - MaximizeWindow() ✗
-    - MinimizeWindow() ✗
-    - ToggleFullscreen() ✗
+            - WINDOW_FULLSCREEN ✓
+            - WINDOW_MAXIMIZED ✓
+            - WINDOW_MINIMIZED ✓
+
     - Immediate mode functions
         - I would like to stray away from an immediate mode GUI at the moment
+        - ClearBackground() ✗
         - BeginDrawing() ✗ (Partial)
         - EndDrawing() ✗ (Partial)
-    - DrawFrame() ✗ (Partial)
-        - Timing functions improvement to get more accurate framerate (Not prioritized, its accurate enough)
     - Viewports ✗
         - Retained Mode Drawing ✗
         - Framework
     - Custom Window Frame
 - Input Handling ✗
+    - SetFullscreenKey() ✓
     - GetMousePos() -> Vec2 ✓
     - GetMousePosAbs() -> Vec2 ✓
+
     - GetMouseButton\[Down/Up/Pressed/Released\](Button) -> bool ✗
     - GetKey\[Down/Up/Pressed/Released\](Key) -> bool ✗
 - Viewports ✗
