@@ -2,6 +2,7 @@
 #define _V_TYPES_H
 
 #include "config.h"
+#include "stddef.h"
 
 /* Vuili Vector Types */
 typedef struct { float x, y; } VFP(Vec2);

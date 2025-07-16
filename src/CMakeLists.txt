@@ -29,8 +29,8 @@ add_library(vuili ${vuili_src} ${vuili_hdr})
 include(BuildConfig)
 
 # Vuili Include Directories
-set(CMAKE_C_FLAGS
-    ${CMAKE_C_FLAGS}
+string(APPEND
+    CMAKE_C_FLAGS
     -Iglfw/include
     -Wimplicit-fallthrough
 )
@@ -45,7 +45,7 @@ if(WIN32) # TODO: Only link to winmm when needed (as of right now that is when U
     target_link_libraries(vuili winmm)
 endif()
 
-set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} -Isrc)
+string(APPEND CMAKE_C_FLAGS  -Isrc)
 
 # Add the src directory to the build include so that we can use #include <vuili.h>
 target_include_directories(vuili PUBLIC
