@@ -484,6 +484,16 @@ void __print_viewport_arr() {
     PRINT("]");
 }
 
+void __print_children_arr(VFP(ViewportID) parent_id) {
+    if(parent_id == -1) return;
+    PRINT("Children of %d:\n[", parent_id);
+    VFP(Viewport)* parent = __get_viewport_pointer(parent_id);
+    for(int i = 0; i < MAX_CHILD_VIEWPORTS; i++) {
+        PRINT("\t%d", parent->children[i]);
+    }
+    PRINT("]");
+}
+
 VFP(ViewportID) RegisterViewport(VFP(ViewportType) type, VFP(ViewportID) parent, VFP(Rectangle) rec) {
     /* Allocation and zero setting */
     if(_VDATA.num_viewports == MAX_VIEWPORTS) {
@@ -538,10 +548,14 @@ VFP(ViewportID) RegisterViewport(VFP(ViewportType) type, VFP(ViewportID) parent,
     PRINT("Affinity: %d", this->affinity);
     */
 
+    /* Debug Viewport Array
     __print_viewport_arr();
+    __print_children_arr(parent);
+    */
     return this->id;
 }
 
+/* Free the memory associated with a viewport and remove it from the global array of viewports */
 void __destroy_viewports_recursive(VFP(ViewportID) id) {
     int this_idx = __get_viewport_index(id);
     VFP(Viewport)* this = _VDATA.viewports[this_idx];
@@ -552,12 +566,42 @@ void __destroy_viewports_recursive(VFP(ViewportID) id) {
 
     _VDATA.num_viewports--;
     free(this);
-    PRINT("%d", this_idx);
     _VDATA.viewports[this_idx] = 0;
 }
 
+/* This removes the framgentation of the Viewport pointers in the global viewport array */
+void __defragment_viewport_array(VFP(Viewport)** array) {
+    int move_back = 0;
+    for(int i = 0; i < MAX_VIEWPORTS; i++) {
+        if(move_back && array[i]) {
+            array[i - move_back] = array[i];
+            array[i] = 0;
+        } else if(!array[i]) {
+            move_back++;
+        }
+    }
+}
+
+/* This removes fragmentation of the child IDs array in a viewport */
+void __defragment_child_viewport_array(VFP(Viewport)* parent) {
+    int move_back = 0;
+    for(int i = 0; i < MAX_CHILD_VIEWPORTS; i++) {
+        if(move_back && parent->children[i]) {
+            parent->children[i - move_back] = parent->children[i];
+            parent->children[i] = 0;
+        } else if(!parent->children[i]) {
+            move_back++;
+        }
+    }
+}
+
 void UnregisterViewport(VFP(ViewportID) id) {
-    ViewportID parent_id = __get_viewport_pointer(id)->parent;
+    VFP(ViewportID) parent_id = __get_viewport_pointer(id)->parent;
+    VFP(Viewport)* parent = __get_viewport_pointer(parent_id);
+    for(int i = 0; i < MAX_CHILD_VIEWPORTS; i++) {
+        if(parent->children[i] == id)
+            parent->children[i] = 0;
+    }
     __destroy_viewports_recursive(id);
 
     /*
@@ -566,6 +610,10 @@ void UnregisterViewport(VFP(ViewportID) id) {
     *
     *  The parent's array of children must also be fixed
     */
-    //TODO: ^
+    __defragment_viewport_array(_VDATA.viewports);
+    __defragment_child_viewport_array(parent);
+    /* Debug Viewport Array
     __print_viewport_arr();
+    __print_children_arr(parent_id);
+    */
 }

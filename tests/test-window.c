@@ -13,7 +13,9 @@ int main() {
     ViewportID id1 = RegisterViewport(STATIC_VIEWPORT, 0, (Rectangle) { .x = 0, .y = 0, .width = 1200, .height = 800 });
     ViewportID id2 = RegisterViewport(STATIC_VIEWPORT, id1, (Rectangle) {0, 0, 1, 1});
     ViewportID id3 = RegisterViewport(STATIC_VIEWPORT, 0, (Rectangle) {0, 0, 1, 1});
+    ViewportID id4 = RegisterViewport(STATIC_VIEWPORT, 0, (Rectangle) {0, 0, 1, 1});
     UnregisterViewport(id1);
+    UnregisterViewport(id3);
 
 #if 0 // Immediate Mode Version
     while(!WindowShouldClose()) {
