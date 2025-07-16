@@ -31,7 +31,7 @@ typedef struct {
 } Size;
 typedef Size Position;
 
-#if (PLATFORM == WINDOWS)
+#if defined(_WIN32)
     __declspec(dllimport) void __stdcall Sleep(unsigned long milli);
     #if defined(USE_HIGH_RES_TIMER)
         __declspec(dllimport) unsigned int timeBeginPeriod(unsigned int uPeriod);
@@ -43,8 +43,8 @@ typedef Size Position;
         __declspec(dllimport) unsigned int timeGetDevCaps(LPTIMECAPS ptc, unsigned int cbtc);
     #endif
 #elif defined(__linux__)
-    //TODO: Sleep function for linux
-    #error Sleep function undefined for linux (internal.h)
+    #include <unistd.h>
+    #define Sleep(x) usleep(1000*x)
 #elif defined(__APPLE__)
     //TODO: Sleep function for MacOS
     #error Sleep function undefined for MacOS (internal.h)

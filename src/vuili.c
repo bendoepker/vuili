@@ -195,7 +195,7 @@ void VFP(InitWindow)(const char* title, int pos_x, int pos_y, int width, int hei
                  _VDATA.window.background_color.b / 255.f,
                  _VDATA.window.background_color.a / 255.f);
 
-#if (PLATFORM == WINDOWS) && defined(USE_HIGH_RES_TIMER)
+#if defined(_WIN32) && defined(USE_HIGH_RES_TIMER)
     timeBeginPeriod(1);
 
     TIMECAPS tc = {0};
@@ -225,7 +225,7 @@ void VFP(CloseWindow)() {
     }
     memset(&_VDATA, 0, sizeof(_VDATA));
     glfwTerminate();
-#if (PLATFORM == WINDOWS) && defined(USE_HIGH_RES_TIMER)
+#if defined(_WIN32) && defined(USE_HIGH_RES_TIMER)
     timeEndPeriod(1);
 #endif
 }
