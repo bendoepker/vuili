@@ -26,6 +26,11 @@ void VFP(SleepX)(int milli) {
 /* Global Error Text */
 char VuiliErrorText[128] = {0};
 
+/* Internal function declarations */
+static VFP(Viewport)* __get_viewport_pointer(VFP(ViewportID) id);
+static int __get_viewport_index(VFP(ViewportID) id);
+void _ExecuteDrawCommands(VFP(Viewport)* viewport);
+
 /* Internal Callbacks */
 static void __v_set_error_text(const char* const text, int n) {
     memset(VuiliErrorText, 0, 128);
@@ -275,10 +280,34 @@ void VFP(PollEvents)() {
 }
 
 void VFP(DrawFrame)() {
-    /* Viewport Walking */
-    VFP(ClearFrame)();
 
-    VFP(PollEvents)();
+    /* Frame Drawing */
+    VFP(ClearFrame)();
+    VFP(ViewportID) draw_layer[MAX_VIEWPORTS] = {0};
+    VFP(ViewportID) prev_draw_layer[MAX_VIEWPORTS] = {0};
+    /* Generate first draw layer */
+    for(int i = 0; i < MAX_CHILD_VIEWPORTS; i++) {
+        if(_VDATA.viewports[0]->children[i] == 0)
+            break;
+        else
+            draw_layer[i] = _VDATA.viewports[0]->children[i];
+    }
+    for(int i = 0;; i++) {
+        /* Each viewport needs to be draw from parent viewport to child viewport, layer by layer */
+        /*
+        *           *       < Draw this
+        *         *   *     < Then these
+        *        * * * *    < Then these
+        *
+        *   Execute draw commands for each viewport in draw layer
+        *   Move draw layer to prev draw layer
+        *   Generate next draw layer
+        */
+
+        _ExecuteDrawCommands(__get_viewport_pointer(draw_layer[i]));
+
+    }
+
     VFP(SwapFrameBuffers)();
 
     /* Partial busy sleep until next frame */
@@ -289,8 +318,11 @@ void VFP(DrawFrame)() {
             else Sleep(1); /* NOTE: USE_HIGH_RES_TIMER will increase this accuracy on windows */
         }
     }
+    /* Input handling */
+    VFP(PollEvents)();
     _VDATA.window.last_frame_time = glfwGetTime();
     glfwSetTime(0);
+
 }
 
 const char* VFP(GetLastErrorText)() {
@@ -457,8 +489,7 @@ VFP(Vec2) VFP(GetMousePosition)() {
 *   Viewport functions
 */
 
-VFP(Viewport)* __get_viewport_pointer(VFP(ViewportID) id) {
-    //TODO: Use binary search, not linear
+static VFP(Viewport)* __get_viewport_pointer(VFP(ViewportID) id) {
     for(int i = 0; i < _VDATA.num_viewports; i++) {
         if(_VDATA.viewports[i]->id == id)
             return _VDATA.viewports[i];
@@ -466,7 +497,7 @@ VFP(Viewport)* __get_viewport_pointer(VFP(ViewportID) id) {
     return 0;
 }
 
-int __get_viewport_index(VFP(ViewportID) id) {
+static int __get_viewport_index(VFP(ViewportID) id) {
     for(int i = 0; i < _VDATA.num_viewports; i++) {
         if(_VDATA.viewports[i]->id == id)
             return i;
@@ -474,6 +505,7 @@ int __get_viewport_index(VFP(ViewportID) id) {
     return -1;
 }
 
+/* Debug print viewport arrays */
 void __print_viewport_arr() {
     PRINT("[");
     for(int i = 0; i < MAX_VIEWPORTS; i++) {
@@ -484,6 +516,7 @@ void __print_viewport_arr() {
     PRINT("]");
 }
 
+/* Debug print viewport arrays */
 void __print_children_arr(VFP(ViewportID) parent_id) {
     if(parent_id == -1) return;
     PRINT("Children of %d:\n[", parent_id);
@@ -494,7 +527,11 @@ void __print_children_arr(VFP(ViewportID) parent_id) {
     PRINT("]");
 }
 
-VFP(ViewportID) RegisterViewport(VFP(ViewportType) type, VFP(ViewportID) parent, VFP(Rectangle) rec) {
+void _ExecuteDrawCommands(VFP(Viewport)* viewport) {
+    //TODO: ^
+}
+
+VFP(ViewportID) VFP(RegisterViewport)(VFP(ViewportType) type, VFP(ViewportID) parent, VFP(Rectangle) rec) {
     /* Allocation and zero setting */
     if(_VDATA.num_viewports == MAX_VIEWPORTS) {
         __v_set_error_text("Failed to create viewport, reached max viewports", 49);
@@ -526,11 +563,17 @@ VFP(ViewportID) RegisterViewport(VFP(ViewportType) type, VFP(ViewportID) parent,
 
     if(this->parent != -1) {
         VFP(Viewport)* p_parent = __get_viewport_pointer(parent);
+        if(!p_parent) {
+            __v_set_error_text("Parent viewport does not exist", 31);
+            return -1;
+        }
         p_parent->children[p_parent->num_children] = this->id;
         p_parent->num_children++;
     }
 
     this->type = type;
+
+    this->window.background_color = (VFP(Color)){0, 0, 0, 0xFF};
 
     /* These are the default values (0) so they do not need to be explicitly set */
     //this->axis = VFP(VERTICAL_AXIS);
@@ -569,6 +612,7 @@ void __destroy_viewports_recursive(VFP(ViewportID) id) {
     _VDATA.viewports[this_idx] = 0;
 }
 
+/* The next two functions ensure that the viewport references are contiguously stored in their respective arrays */
 /* This removes the framgentation of the Viewport pointers in the global viewport array */
 void __defragment_viewport_array(VFP(Viewport)** array) {
     int move_back = 0;
@@ -595,23 +639,35 @@ void __defragment_child_viewport_array(VFP(Viewport)* parent) {
     }
 }
 
-void UnregisterViewport(VFP(ViewportID) id) {
-    VFP(ViewportID) parent_id = __get_viewport_pointer(id)->parent;
-    VFP(Viewport)* parent = __get_viewport_pointer(parent_id);
-    for(int i = 0; i < MAX_CHILD_VIEWPORTS; i++) {
-        if(parent->children[i] == id)
-            parent->children[i] = 0;
+void VFP(UnregisterViewport)(VFP(ViewportID) id) {
+    if(id < 0) {
+        __v_set_error_text("Invalid viewport id sent to UnregisterViewport()", 49);
+        return;
+    }
+    VFP(ViewportID) parent_id;
+    VFP(Viewport)* parent;
+    if(id != 0) {
+        parent_id = __get_viewport_pointer(id)->parent;
+        parent = __get_viewport_pointer(parent_id);
+    } else {
+        parent_id = -1;
+        parent = 0;
+    }
+
+    if(parent) {
+        for(int i = 0; i < MAX_CHILD_VIEWPORTS; i++) {
+            if(parent->children[i] == id)
+                parent->children[i] = 0;
+        }
     }
     __destroy_viewports_recursive(id);
 
-    /*
-    *  Child viewports are not guaranteed to be in order with their parents
-    *  so the global array must be fixed to fill the holes after they are removed
-    *
-    *  The parent's array of children must also be fixed
-    */
+    /* Viewport arrays are guaranteed to be ordered low to high but not for child viewports to be contiguous */
+    /* When the arrays are cleared the data must be restored to a contiguous series, hence defragmented */
     __defragment_viewport_array(_VDATA.viewports);
-    __defragment_child_viewport_array(parent);
+    if(parent)
+        __defragment_child_viewport_array(parent);
+
     /* Debug Viewport Array
     __print_viewport_arr();
     __print_children_arr(parent_id);

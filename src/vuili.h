@@ -107,8 +107,8 @@ VFP(Vec2) VFP(GetMousePosition)();
 *   Viewport functions
 */
 
-VFP(ViewportID) RegisterViewport(VFP(ViewportType) type, VFP(ViewportID) parent, VFP(Rectangle) rec);
+VFP(ViewportID) VFP(RegisterViewport)(VFP(ViewportType) type, VFP(ViewportID) parent, VFP(Rectangle) rec);
 
-void UnregisterViewport(VFP(ViewportID) id);
+void VFP(UnregisterViewport)(VFP(ViewportID) id);
 
 #endif //_VUILI_H

@@ -61,11 +61,11 @@ typedef struct {
 
     struct {
         GLFWwindow* window;                         //Pointer to the window containing this viewport, null if not undocked
-        Size min_size;
-        Size max_size;
-        Size size;
-        Position position;
-        VFP(Color) background_color;
+        Size min_size;                              //Minimum size of the viewport
+        Size max_size;                              //Maximum size of the viewport
+        Size size;                                  //Current size of the viewport
+        Position position;                          //Position of the viewport in relation to the top left of the main window or monitor
+        VFP(Color) background_color;                //Background color of the viewport
     } window;
 
     struct {
