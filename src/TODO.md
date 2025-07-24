@@ -7,6 +7,13 @@
 ## BREAKING / ASAP
 
 - Per Viewport Draw Commands List and Execution
+    - _ExecuteDrawCommands() ^
+
+## NON-BREAKING / NON-ASAP
+
+- Define Viewports before window creation
+- Change SetWindowFramerate() to SetFramerate()
+- RestoreWindow()
 
 <br/>
 
@@ -21,30 +28,8 @@
 ## Basic Window Utilities
 
 - Window Context
-    - GetWindowSize() ✓
-    - SetWindowSize() ✓
-    - CloseWindow() ✓
-    - WindowShouldClose() ✓
-    - SetWindowShouldClose() ✓
-    - SwapBuffers() ✓
-    - SetMinWindowSize() ✓
-    - SetMaxWindowSize() ✓
-    - UnsetMinWindowSize() ✓
-    - UnsetMaxWindowSize() ✓
     - ToggleWindowFlags() ✓
-    - ChangeWindowFlags() ✓ (Pending ApplyWindowFlags())
     - GetWindowFlags() ✓
-    - SetWindowTitle() ✓
-    - GetWindowPos() ✓
-    - SetWindowPos() ✓
-    - SetWindowFramerate() ✓
-    - GetFramerate() ✓
-    - MaximizeWindow() ✓
-    - MinimizeWindow() ✓
-    - ToggleFullscreen() ✓
-    - DrawFrame() ✓ (Partial)
-        - Timing functions improvement to get more accurate framerate (Not prioritized, its accurate enough)
-        - Need to render all draw calls
     - InitWindow() ✓ (Partial)
         - Window Creation Flags
             - WINDOW_RESIZEABLE ✓
@@ -54,6 +39,27 @@
             - WINDOW_FULLSCREEN ✓
             - WINDOW_MAXIMIZED ✓
             - WINDOW_MINIMIZED ✓
+    - SetWindowShouldClose() ✓
+    - WindowShouldClose() ✓
+    - CloseWindow() ✓
+    - GetWindowSize() ✓
+    - SetWindowSize() ✓
+    - SetMinWindowSize() ✓
+    - SetMaxWindowSize() ✓
+    - UnsetMinWindowSize() ✓
+    - UnsetMaxWindowSize() ✓
+    - SetWindowTitle() ✓
+    - GetWindowPos() ✓
+    - SetWindowPos() ✓
+    - SwapBuffers() ✓
+    - SetWindowFramerate() ✓
+    - GetFramerate() ✓
+    - MaximizeWindow() ✓
+    - MinimizeWindow() ✓
+    - ToggleFullscreen() ✓
+    - DrawFrame() ✓ (Partial)
+        - Need to render all draw calls
+    - Viewport Structure integration ✓
 
     - Immediate mode functions
         - I would like to stray away from an immediate mode GUI at the moment
@@ -73,7 +79,6 @@
     - GetKey\[Down/Up/Pressed/Released\](Key) -> bool ✗
 - Viewports ✗
     - Drawing to viewports ✗
-    - Viewport Structure integration ✗
     - Detatchable windows ✗
 - Drawing
     - Shader loader / management functions
