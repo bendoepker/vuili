@@ -209,16 +209,21 @@ void VFP(InitWindow)(const char* title, int pos_x, int pos_y, int width, int hei
 #endif
 
     /* Set the main window viewport */
-    VFP(ViewportID) viewport_id = RegisterViewport(STATIC_VIEWPORT, -1, (VFP(Rectangle)) {.x = 0, .y = 0, .width = width, .height = height });
-    if(viewport_id != 0) {
-        /* NOTE: I don't like this being the case but for now it will have to do */
-        /* TODO: ^ */
-        __v_set_error_text("Viewports must be registered after the window creation", 55);
-        glfwDestroyWindow(_VDATA.window.window);
-        glfwTerminate();
-        return;
+    if(!_VDATA.viewports[0]) {
+        /* We must allocate the space for the default viewport */
+        _VDATA.viewports[0] = malloc(sizeof(VFP(Viewport)));
+        if(!_VDATA.viewports[0]) {
+            __v_set_error_text("Failed to allocate memory", 26);
+            glfwDestroyWindow(_VDATA.window.window);
+            glfwTerminate();
+            return;
+        }
     }
+    _VDATA.viewports[0]->axis = HORIZONTAL_AXIS;
+    _VDATA.viewports[0]->type = STATIC_VIEWPORT;
+    _VDATA.viewports[0]->parent = -1;
 
+    /* No error */
     __v_set_error_text("", 1);
 }
 
@@ -577,8 +582,22 @@ void _ExecuteDrawCommands(VFP(Viewport)* viewport) {
     //TODO: ^
 }
 
-VFP(ViewportID) VFP(RegisterViewport)(VFP(ViewportType) type, VFP(ViewportID) parent, VFP(Rectangle) rec) {
+VFP(ViewportID) VFP(RegisterViewport)(VFP(ViewportID) parent, int width, int height) {
+    assert(parent >= 0);
     /* Allocation and zero setting */
+    if(_VDATA.num_viewports == 0) {
+        /*
+         * If the main viewport has not been registered yet (i.e. we are registering viewports before InitWindow)
+         * Then we should create an empty viewport in its position
+         */
+        _VDATA.viewports[0] = malloc(sizeof(VFP(Viewport)));
+        if(!_VDATA.viewports[0]) {
+            __v_set_error_text("Failed to allocate memory", 26);
+            return -1;
+        }
+        memset(_VDATA.viewports[0], 0, sizeof(VFP(Viewport)));
+        _VDATA.num_viewports++;
+    }
     if(_VDATA.num_viewports == MAX_VIEWPORTS) {
         __v_set_error_text("Failed to create viewport, reached max viewports", 49);
         return -1;
@@ -592,32 +611,28 @@ VFP(ViewportID) VFP(RegisterViewport)(VFP(ViewportType) type, VFP(ViewportID) pa
     memset(this, 0, sizeof(VFP(Viewport)));
 
     /* Set the id number and update global state */
-    if(_VDATA.num_viewports == 0) {
-        this->id = 0;
+    if(_VDATA.num_viewports == 1) {
+        this->id = 1;
     } else {
         this->id = _VDATA.viewports[_VDATA.num_viewports - 1]->id + 1;
     }
     _VDATA.num_viewports++;
 
-    /* Set the viewport params */
-    this->window.position.x = rec.x;
-    this->window.position.y = rec.y;
-    this->window.size.x = rec.width;
-    this->window.size.y = rec.height;
-
     this->parent = parent;
+    this->window.size.x = width;
+    this->window.size.y = height;
 
-    if(this->parent != -1) {
-        VFP(Viewport)* p_parent = __get_viewport_pointer(parent);
-        if(!p_parent) {
-            __v_set_error_text("Parent viewport does not exist", 31);
-            return -1;
-        }
-        p_parent->children[p_parent->num_children] = this->id;
-        p_parent->num_children++;
+    VFP(Viewport)* p_parent = __get_viewport_pointer(parent);
+    if(!p_parent) {
+        __v_set_error_text("Parent viewport does not exist", 31);
+        return -1;
     }
-
-    this->type = type;
+    if(p_parent->num_children == MAX_CHILD_VIEWPORTS) {
+        __v_set_error_text("Parent viewport has reached max child viewports", 48);
+        return -1;
+    }
+    p_parent->children[p_parent->num_children] = this->id;
+    p_parent->num_children++;
 
     this->window.background_color = (VFP(Color)){0, 0, 0, 0xFF};
 
@@ -720,4 +735,95 @@ void VFP(UnregisterViewport)(VFP(ViewportID) id) {
     __print_viewport_arr();
     __print_children_arr(parent_id);
     */
+}
+
+void VFP(SetViewportType)(VFP(ViewportID) id, VFP(ViewportType) type) {
+    assert(id > 0);
+    VFP(Viewport)* idp = __get_viewport_pointer(id);
+    if(!idp) {
+        __v_set_error_text("Invalid id", 11);
+        return;
+    }
+    idp->type = type;
+}
+
+void VFP(SetViewportAxis)(VFP(ViewportID) id, VFP(ViewportAxis) axis) {
+    VFP(Viewport)* idp = __get_viewport_pointer(id);
+    if(!idp) {
+        __v_set_error_text("Invalid id", 11);
+        return;
+    }
+    idp->axis = axis;
+}
+
+void VFP(SetViewportAffinity)(VFP(ViewportID) id, VFP(ViewportAffinity) affinity) {
+    assert(id > 0);
+    VFP(Viewport)* idp = __get_viewport_pointer(id);
+    if(!idp) {
+        __v_set_error_text("Invalid id", 11);
+        return;
+    }
+    idp->affinity = affinity;
+}
+
+void VFP(SetViewportSize)(VFP(ViewportID) id, unsigned int main_axis, unsigned int cross_axis) {
+    assert(id > 0);
+    VFP(Viewport)* idp = __get_viewport_pointer(id);
+    if(!idp) {
+        __v_set_error_text("Invalid id", 11);
+        return;
+    }
+    idp->window.size.main_axis = main_axis;
+    idp->window.size.cross_axis = cross_axis;
+}
+
+void VFP(SetViewportMinSize)(VFP(ViewportID) id, unsigned int main_axis, unsigned int cross_axis) {
+    assert(id > 0);
+    VFP(Viewport)* idp = __get_viewport_pointer(id);
+    if(!idp) {
+        __v_set_error_text("Invalid id", 11);
+        return;
+    }
+    idp->window.min_size.main_axis = main_axis;
+    idp->window.min_size.cross_axis = cross_axis;
+}
+
+void VFP(SetViewportMaxSize)(VFP(ViewportID) id, unsigned int main_axis, unsigned int cross_axis) {
+    assert(id > 0);
+    VFP(Viewport)* idp = __get_viewport_pointer(id);
+    if(!idp) {
+        __v_set_error_text("Invalid id", 11);
+        return;
+    }
+    idp->window.max_size.main_axis = main_axis;
+    idp->window.max_size.cross_axis = cross_axis;
+}
+
+void VFP(UndockViewport)(VFP(ViewportID) id) {
+    //TODO: Relies on CUSTOM_TITLEBAR
+}
+
+void VFP(DockViewport)(VFP(ViewportID) id) {
+    //TODO: Relies on CUSTOM_TITLEBAR
+}
+
+void VFP(SetViewportBackgroundColor)(VFP(ViewportID) id, VFP(Color) color) {
+    assert(id >= 0);
+    VFP(Viewport)* idp = __get_viewport_pointer(id);
+    if(!idp) {
+        __v_set_error_text("Invalid id", 11);
+        return;
+    }
+    idp->window.background_color = color;
+}
+
+void VFP(SetViewportVisibility)(VFP(ViewportID) id, bool hidden) {
+    /* The main viewport cannot be hidden */
+    assert(id > 0);
+    VFP(Viewport)* idp = __get_viewport_pointer(id);
+    if(!idp) {
+        __v_set_error_text("Invalid id", 11);
+        return;
+    }
+    idp->hidden = hidden;
 }

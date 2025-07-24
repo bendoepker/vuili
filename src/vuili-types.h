@@ -200,26 +200,24 @@ typedef enum {
 typedef int VFP(ViewportID);
 
 typedef enum {
-    VFP(STATIC_VIEWPORT) = 0,                //Cannot be undocked from its parent viewport
-    VFP(DYNAMIC_VIEWPORT) = 1,               //Can be undocked from its parent viewport
-    VFP(DOCKABLE_VIEWPORT) = 1,              //Same as the dynamic viewport
-    VFP(FLOATINT_VIEWPORT) = 2,              //Bound to its parent viewport's window but floating within it
+    VFP(STATIC_VIEWPORT) = 0,                   //Cannot be undocked from its parent viewport
+    VFP(DYNAMIC_VIEWPORT) = 1,                  //Can be undocked from its parent viewport
+    VFP(DOCKABLE_VIEWPORT) = 1,                 //Same as the dynamic viewport
+    VFP(FLOATINT_VIEWPORT) = 2,                 //Bound to its parent viewport's window but floating within it
 } VFP(ViewportType);
 
 typedef enum {
-    VFP(VERTICAL_AXIS) = 0,             //Child viewports are aligned from top to bottom
-    VFP(HORIZONTAL_AXIS),               //Child viewports are aligned from left to right
-    VFP(REVERSE_VERTICAL_AXIS),         //Child viewports are aligned from bottom to top
-    VFP(REVERSE_HORIZONTAL_AXIS),       //Child viewports are aligned from right to left
+    VFP(HORIZONTAL_AXIS) = 0,                   //Child viewports are aligned from left to right
+    VFP(VERTICAL_AXIS) = 1,                     //Child viewports are aligned from top to bottom
+    VFP(REVERSE_HORIZONTAL_AXIS) = 2,           //Child viewports are aligned from right to left
+    VFP(REVERSE_VERTICAL_AXIS) = 3,             //Child viewports are aligned from bottom to top
 } VFP(ViewportAxis);
 
 // ViewportAffinity == The side of the parent viewport that the viewport will align to
 typedef enum {
-    VFP(NO_AFFINITY) = 0,               //Viewport will not make any allignment attempts
-    VFP(TOP_AFFINITY),                  //Viewport will try to align to the top of its parent
-    VFP(RIGHT_AFFINITY),                //Viewport will try to align to the right of its parent
-    VFP(LEFT_AFFINITY),                 //Viewport will try to align to the left of its parent
-    VFP(BOTTOM_AFFINITY)                //Viewport will try to align to the bottom of its parent,
+    VFP(NO_AFFINITY) = 0,                       //Viewport will not make any specific allignment attempts
+    VFP(FAR_AFFINITY) = 1,                      //Viewport will try to allign to the far side of the viewport's axis
+    VFP(CLOSE_AFFINITY) = 2,                    //Viewport will try to allign to the close side of the viewport's axis
 } VFP(ViewportAffinity);
 
 #endif //_V_TYPES_H

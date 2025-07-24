@@ -46,6 +46,99 @@ Viewport Object
 
 <br/>
 
+### Drawing Viewports
+
+```txt
+Viewport 0
+{
+    Viewport 1
+    {
+        Viewport 4
+        Viewport 5
+    }
+    Viewport 2
+    Viewport 3
+}
+
+Viewport 0 (Main Viewport)
+{
+    Horizontal Axis
+    No Affinity (Forced)
+    Static Type (Forced)
+    No Min / Max Size (Forced)
+    Children: 1, 2, 3
+}
+
+Viewport 1
+{
+    Vertical Axis
+    Left Affinity
+    Static Type
+    No Min / Max Size
+    Children: 4, 5
+}
+
+Viewport 2
+{
+    Vertical Axis
+    Right Affinity
+    Static Type
+    No Min / Max Size
+    Children: None
+}
+
+Viewport 3
+{
+    Vertical Axis
+    Left Affinity
+    Static Type
+    No Min / Max Size
+    Children: None
+}
+
+Resulting Window Should Look Like:
++---------------------------------------------+
+| Icon               Title             - [] X |
++---------------------------------------------+
+|               |              |              |
+|  Viewport 1   | Viewport 3   | Viewport 2   |
+|  Viewport 4   |              |              |
+|               |              |              |
++---------------+              |              |
+|               |              |              |
+| Viewport 5    |              |              |
+|               |              |              |
+|               |              |              |
++---------------------------------------------+
+
+If we added max values as such
+
+Viewport 1
+{
+    Max Size: .25 width
+}
+
+Viewport 2
+{
+    Max Size: .25 width
+}
+
+Resulting Window Should Look Like:
++--------------------------------------------+
+| Icon              Title             - [] X |
++--------------------------------------------+
+|           |                    |           |
+| Viewport 1|      Viewport 3    | Viewport 2|
+| Viewport 4|                    |           |
+|           |                    |           |
++-----------+                    |           |
+|           |                    |           |
+| Viewport 1|                    |           |
+| Viewport 5|                    |           |
+|           |                    |           |
++--------------------------------------------+
+```
+
 ### Main loop ex:
 
 ```c
