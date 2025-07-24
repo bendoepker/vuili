@@ -490,17 +490,31 @@ VFP(Vec2) VFP(GetMousePosition)() {
 */
 
 static VFP(Viewport)* __get_viewport_pointer(VFP(ViewportID) id) {
-    for(int i = 0; i < _VDATA.num_viewports; i++) {
-        if(_VDATA.viewports[i]->id == id)
-            return _VDATA.viewports[i];
+    int lo = 0, hi = _VDATA.num_viewports - 1, mi = 0;
+    while(lo <= hi){
+        mi = lo + (hi - lo) / 2;
+        if(_VDATA.viewports[mi]->id > id) {
+            hi = mi - 1;
+        } else if(_VDATA.viewports[mi]->id < id) {
+            lo = mi + 1;
+        } else {
+            return _VDATA.viewports[mi];
+        }
     }
     return 0;
 }
 
 static int __get_viewport_index(VFP(ViewportID) id) {
-    for(int i = 0; i < _VDATA.num_viewports; i++) {
-        if(_VDATA.viewports[i]->id == id)
-            return i;
+    int lo = 0, hi = _VDATA.num_viewports - 1, mi = 0;
+    while(lo <= hi){
+        mi = lo + (hi - lo) / 2;
+        if(_VDATA.viewports[mi]->id > id) {
+            hi = mi - 1;
+        } else if(_VDATA.viewports[mi]->id < id) {
+            lo = mi + 1;
+        } else {
+            return mi;
+        }
     }
     return -1;
 }
