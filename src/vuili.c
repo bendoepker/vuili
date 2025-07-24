@@ -292,20 +292,52 @@ void VFP(DrawFrame)() {
         else
             draw_layer[i] = _VDATA.viewports[0]->children[i];
     }
-    for(int i = 0;; i++) {
-        /* Each viewport needs to be draw from parent viewport to child viewport, layer by layer */
-        /*
-        *           *       < Draw this
-        *         *   *     < Then these
-        *        * * * *    < Then these
-        *
-        *   Execute draw commands for each viewport in draw layer
-        *   Move draw layer to prev draw layer
-        *   Generate next draw layer
-        */
+    for(;;) {
+        printf("[ ");
+        for(int i = 0;; i++) {
+            /* Each viewport needs to be draw from parent viewport to child viewport, layer by layer */
+            /*
+            *           *       < Draw this     < Children of main viewport
+            *         *   *     < Then these    < Grandchildren of main viewport
+            *        * * * *    < Then these    < Great grandchildren of main viewport
+            *
+            *   Execute draw commands for each viewport in draw layer
+            *   Move draw layer to prev draw layer
+            *   Generate next draw layer
+            */
 
-        _ExecuteDrawCommands(__get_viewport_pointer(draw_layer[i]));
+            if(!draw_layer[i])
+                break;
 
+            _ExecuteDrawCommands(__get_viewport_pointer(draw_layer[i]));
+            printf("%d ", draw_layer[i]);
+        }
+        PRINT("]");
+
+        /* Move the draw commands to the prev_draw_layer */
+        memset(prev_draw_layer, 0, sizeof(VFP(ViewportID)) * MAX_VIEWPORTS);
+        for(int i = 0;; i++) {
+            if(!draw_layer[i])
+                break;
+
+            prev_draw_layer[i] = draw_layer[i];
+        }
+
+        /* Create the new layer of draw commands */
+        memset(draw_layer, 0, sizeof(VFP(ViewportID)) * MAX_VIEWPORTS);
+        for(int i = 0, k = 0;; i++) {
+            if(prev_draw_layer[i]) {
+                VFP(Viewport)* cur = __get_viewport_pointer(prev_draw_layer[i]);
+                if(cur->num_children) {
+                    memcpy(&draw_layer[k], cur->children, cur->num_children * sizeof(VFP(ViewportID)));
+                    k += cur->num_children;
+                }
+            }
+            else break;
+        }
+
+        if(!draw_layer[0])
+            break;
     }
 
     VFP(SwapFrameBuffers)();
@@ -679,8 +711,10 @@ void VFP(UnregisterViewport)(VFP(ViewportID) id) {
     /* Viewport arrays are guaranteed to be ordered low to high but not for child viewports to be contiguous */
     /* When the arrays are cleared the data must be restored to a contiguous series, hence defragmented */
     __defragment_viewport_array(_VDATA.viewports);
-    if(parent)
+    if(parent) {
         __defragment_child_viewport_array(parent);
+        parent->num_children--;
+    }
 
     /* Debug Viewport Array
     __print_viewport_arr();

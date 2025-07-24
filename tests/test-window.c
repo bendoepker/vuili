@@ -12,6 +12,12 @@ int main() {
     SetWindowFramerate(60);
     ViewportID id1 = RegisterViewport(STATIC_VIEWPORT, 0, (Rectangle) { .x = 0, .y = 0, .width = 1200, .height = 800 });
     ViewportID id2 = RegisterViewport(STATIC_VIEWPORT, id1, (Rectangle) {0, 0, 25, 25});
+    ViewportID id3 = RegisterViewport(STATIC_VIEWPORT, id1, (Rectangle) {0, 0, 25, 25});
+    ViewportID id4 = RegisterViewport(STATIC_VIEWPORT, id1, (Rectangle) {0, 0, 25, 25});
+    ViewportID id5 = RegisterViewport(STATIC_VIEWPORT, id3, (Rectangle) {0, 0, 25, 25});
+    ViewportID id6 = RegisterViewport(STATIC_VIEWPORT, id3, (Rectangle) {0, 0, 25, 25});
+    ViewportID id7 = RegisterViewport(STATIC_VIEWPORT, id4, (Rectangle) {0, 0, 25, 25});
+    ViewportID id8 = RegisterViewport(STATIC_VIEWPORT, id4, (Rectangle) {0, 0, 25, 25});
 
     SetBackgroundColor((Color) { .r = 0x77, .g = 0x77, .b = 0x77, .a = 0x55 });
     unsigned char x = 0;
@@ -24,6 +30,7 @@ int main() {
         // Input Handling...
 
         DrawFrame();
+        SetWindowShouldClose();
     }
 
     // Cleanup
