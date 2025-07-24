@@ -1,14 +1,7 @@
-Vuili
+Vuili -- Viewport UI Library
 =====
-
-(V)iewport (UI) (Li)brary
--------------------------
-
-<br/>
-
 Current Feature Set
 -------------------
-
 <h3> Window </h3>
 
 Creation and Destruction
