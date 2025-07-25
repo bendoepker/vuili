@@ -64,15 +64,23 @@ typedef struct {
     VFP(ViewportAxis) axis;                         //Render flow of the viewport
     VFP(ViewportAffinity) affinity;                 //Affinity to the parent viewport
     bool hidden;                                    //If true then the viewport will not be rendered
+    bool resizeable_main_axis;                      //If the viewport can be resized on its main axis
+    bool resizeable_cross_axis;                     //If the viewport can be resized on its cross axis
 
     struct {
         GLFWwindow* window;                         //Pointer to the window containing this viewport, null if not undocked
-        VSize min_size;                              //Minimum size of the viewport
-        VSize max_size;                              //Maximum size of the viewport
-        VSize size;                                  //Current size of the viewport
+        VSize min_size;                             //Minimum size of the viewport
+        VSize max_size;                             //Maximum size of the viewport
+        VSize size;                                 //Current size of the viewport
         Position position;                          //Position of the viewport in relation to the top left of the main window or monitor
         VFP(Color) background_color;                //Background color of the viewport
     } window;
+
+    struct {
+        bool resize;                                //Should the draw directions be recalculated
+        Size size;
+        Position position;
+    } draw_directions;
 
     struct {
         struct {

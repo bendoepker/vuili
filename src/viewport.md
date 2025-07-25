@@ -137,6 +137,52 @@ Resulting Window Should Look Like:
 | Viewport 5|                    |           |
 |           |                    |           |
 +--------------------------------------------+
+
+Order Of Operations for Viewport Drawing
+
+Viewport Draw Direction
+Default is left to right (Horizontal)
+
+Order the child viewports
+Create a list of the viewports and adjust the order
+
+Find the actual size of each viewport
+If size is specified then we subtract that amount of space from the available space
+We then divide the remaining amount of space by the number of viewports left to get the size of each viewport
+
+This is then repeated for each of the child viewports
+
+WHEN TO RECALCULATE SIZE COMMANDS
+- When the window is resized the main viewport should be recalculated
+    - This inlcudes fullscreen toggle, maximization, and restoration
+    - Notably NOT including minimization
+- When a new viewport is registered, its parent should be recalculated
+- When a viewport is unregistered, its parent should be recalculated
+- NOT When a viewport's type changes
+- When a viewport is resized on its parent's cross axis, the first ancestor with a differing axis should be recalculated
+    - i.e. when Viewport 5 is resized on its horizontal axis, then viewport 0 should be recalculated
+- When a viewport is resized on its parent's main axis, its parent should be recalculated
+    - i.e. when viewport 5 is resized on its vertical axis, then viewport 1 should be recalculated
+- When a viewport's axis is changed, that viewport should be recalculated
+    - i.e. when viewport 1 is changed to a horizontal axis, then viewport 1 should be recalculated
+- When a docked viewport becomes hidden, its parent should be recalculated
+- NOT When an undocked viewport is closed (becomes hidden)
+
+WHEN TO RECALCULATE SIZE COMMANDS (In terms of function names)
+- RegisterViewport()    ->  parent viewport
+- UnregisterViewport()  ->  parent viewport
+- ResizeViewport() on parent's main axis    ->  parent viewport
+- ResizeViewport() on parent's cross axis   ->  first ancestor with axis differing parent's axis (or just the main axis)
+- SetViewportAxis()     ->  this viewport
+- SetViewportVisibility ->  parent viewport
+- ToggleFullscreen()    ->  main viewport
+- MaximizeWindow()      ->  main viewport
+    - This will actually be triggered by the maximize callback
+- SetWindowSize()       ->  main viewport
+    - This will actually be triggered by the resize callback
+- If SetViewportMaxSize() is less than the viewports draw size      ->  parent viewport
+- If SetViewportMinSize() is greater than the viewports draw size   ->  parent viewport
+
 ```
 
 ### Main loop ex:

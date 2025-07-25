@@ -203,7 +203,7 @@ typedef enum {
     VFP(STATIC_VIEWPORT) = 0,                   //Cannot be undocked from its parent viewport
     VFP(DYNAMIC_VIEWPORT) = 1,                  //Can be undocked from its parent viewport
     VFP(DOCKABLE_VIEWPORT) = 1,                 //Same as the dynamic viewport
-    VFP(FLOATINT_VIEWPORT) = 2,                 //Bound to its parent viewport's window but floating within it
+    VFP(FLOATING_VIEWPORT) = 2,                 //Bound to its parent viewport's window but floating within it
 } VFP(ViewportType);
 
 typedef enum {

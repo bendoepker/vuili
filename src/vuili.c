@@ -54,6 +54,7 @@ static void __window_size_callback(GLFWwindow* window, int x, int y) {
         return;
     _VDATA.window.size.x = x;
     _VDATA.window.size.y = y;
+    _VDATA.viewports[0]->draw_directions.resize = true;
 }
 
 static void __minimize_callback(GLFWwindow* window, int minimized) {
@@ -70,6 +71,7 @@ static void __maximize_callback(GLFWwindow* window, int maximized) {
         _VDATA.window.maximized = true;
     else
         _VDATA.window.maximized = false;
+    _VDATA.viewports[0]->draw_directions.resize = true;
 }
 
 static void __frame_buffer_size_callback(GLFWwindow* window, int x, int y) {
@@ -222,6 +224,7 @@ void VFP(InitWindow)(const char* title, int pos_x, int pos_y, int width, int hei
     _VDATA.viewports[0]->axis = HORIZONTAL_AXIS;
     _VDATA.viewports[0]->type = STATIC_VIEWPORT;
     _VDATA.viewports[0]->parent = -1;
+    _VDATA.viewports[0]->draw_directions.resize = true;
 
     /* No error */
     __v_set_error_text("", 1);
@@ -298,7 +301,6 @@ void VFP(DrawFrame)() {
             draw_layer[i] = _VDATA.viewports[0]->children[i];
     }
     for(;;) {
-        printf("[ ");
         for(int i = 0;; i++) {
             /* Each viewport needs to be draw from parent viewport to child viewport, layer by layer */
             /*
@@ -315,9 +317,7 @@ void VFP(DrawFrame)() {
                 break;
 
             _ExecuteDrawCommands(__get_viewport_pointer(draw_layer[i]));
-            printf("%d ", draw_layer[i]);
         }
-        PRINT("]");
 
         /* Move the draw commands to the prev_draw_layer */
         memset(prev_draw_layer, 0, sizeof(VFP(ViewportID)) * MAX_VIEWPORTS);
@@ -426,6 +426,7 @@ void VFP(UnsetMinWindowSize)() {
 }
 
 void VFP(ToggleFullscreen)() {
+    assert(_VDATA.window.window != NULL);
     if(_VDATA.window.fullscreen) {
         glfwSetWindowMonitor(_VDATA.window.window, NULL, _VDATA.window.position.x, _VDATA.window.position.y,
                              _VDATA.window.size.x, _VDATA.window.size.y, GLFW_DONT_CARE);
@@ -436,6 +437,8 @@ void VFP(ToggleFullscreen)() {
         glfwSetWindowMonitor(_VDATA.window.window, monitor, 0, 0, mode->width, mode->height, GLFW_DONT_CARE);
         _VDATA.window.fullscreen = true;
     }
+
+    _VDATA.viewports[0]->draw_directions.resize = true;
 }
 
 void VFP(SetFullscreenKey)(VFP(KeyboardInput) key) {
@@ -582,7 +585,7 @@ void _ExecuteDrawCommands(VFP(Viewport)* viewport) {
     //TODO: ^
 }
 
-VFP(ViewportID) VFP(RegisterViewport)(VFP(ViewportID) parent, int width, int height) {
+VFP(ViewportID) VFP(RegisterViewport)(VFP(ViewportID) parent, int main_axis, int cross_axis) {
     assert(parent >= 0);
     /* Allocation and zero setting */
     if(_VDATA.num_viewports == 0) {
@@ -619,8 +622,8 @@ VFP(ViewportID) VFP(RegisterViewport)(VFP(ViewportID) parent, int width, int hei
     _VDATA.num_viewports++;
 
     this->parent = parent;
-    this->window.size.x = width;
-    this->window.size.y = height;
+    this->window.size.main_axis = main_axis;
+    this->window.size.cross_axis = cross_axis;
 
     VFP(Viewport)* p_parent = __get_viewport_pointer(parent);
     if(!p_parent) {
@@ -634,7 +637,7 @@ VFP(ViewportID) VFP(RegisterViewport)(VFP(ViewportID) parent, int width, int hei
     p_parent->children[p_parent->num_children] = this->id;
     p_parent->num_children++;
 
-    this->window.background_color = (VFP(Color)){0, 0, 0, 0xFF};
+    p_parent->draw_directions.resize = true;
 
     /* These are the default values (0) so they do not need to be explicitly set */
     //this->axis = VFP(VERTICAL_AXIS);
@@ -701,35 +704,28 @@ void __defragment_child_viewport_array(VFP(Viewport)* parent) {
 }
 
 void VFP(UnregisterViewport)(VFP(ViewportID) id) {
-    if(id < 0) {
-        __v_set_error_text("Invalid viewport id sent to UnregisterViewport()", 49);
-        return;
-    }
+    assert(id > 0);
     VFP(ViewportID) parent_id;
     VFP(Viewport)* parent;
-    if(id != 0) {
-        parent_id = __get_viewport_pointer(id)->parent;
-        parent = __get_viewport_pointer(parent_id);
-    } else {
-        parent_id = -1;
-        parent = 0;
+    parent = __get_viewport_pointer(parent_id);
+    if(!parent) {
+        __v_set_error_text("Invalid viewport id", 20);
+        return;
     }
+    parent_id = parent->parent;
 
-    if(parent) {
-        for(int i = 0; i < MAX_CHILD_VIEWPORTS; i++) {
-            if(parent->children[i] == id)
-                parent->children[i] = 0;
-        }
+    for(int i = 0; i < MAX_CHILD_VIEWPORTS; i++) {
+        if(parent->children[i] == id)
+            parent->children[i] = 0;
     }
     __destroy_viewports_recursive(id);
 
     /* Viewport arrays are guaranteed to be ordered low to high but not for child viewports to be contiguous */
     /* When the arrays are cleared the data must be restored to a contiguous series, hence defragmented */
     __defragment_viewport_array(_VDATA.viewports);
-    if(parent) {
-        __defragment_child_viewport_array(parent);
-        parent->num_children--;
-    }
+    __defragment_child_viewport_array(parent);
+    parent->num_children--;
+    parent->draw_directions.resize = true;
 
     /* Debug Viewport Array
     __print_viewport_arr();
@@ -754,6 +750,8 @@ void VFP(SetViewportAxis)(VFP(ViewportID) id, VFP(ViewportAxis) axis) {
         return;
     }
     idp->axis = axis;
+    VFP(Viewport)* parent = __get_viewport_pointer(idp->parent);
+    parent->draw_directions.resize = true;
 }
 
 void VFP(SetViewportAffinity)(VFP(ViewportID) id, VFP(ViewportAffinity) affinity) {
@@ -786,6 +784,24 @@ void VFP(SetViewportMinSize)(VFP(ViewportID) id, unsigned int main_axis, unsigne
     }
     idp->window.min_size.main_axis = main_axis;
     idp->window.min_size.cross_axis = cross_axis;
+
+    if(idp->axis == HORIZONTAL_AXIS || idp->axis == REVERSE_HORIZONTAL_AXIS) {
+        /* Main Axis is the X Axis */
+        if(idp->draw_directions.size.x < main_axis || idp->draw_directions.size.y < cross_axis) {
+            VFP(Viewport)* parent = __get_viewport_pointer(idp->parent);
+            parent->draw_directions.resize = true;
+        }
+    } else {
+        /* Main Axis is the Y Axis */
+        if(idp->draw_directions.size.x < cross_axis || idp->draw_directions.size.y < main_axis) {
+            VFP(Viewport)* parent = __get_viewport_pointer(idp->parent);
+            parent->draw_directions.resize = true;
+        }
+    }
+    if(main_axis == 0 || cross_axis == 0) {
+        VFP(Viewport)* parent = __get_viewport_pointer(idp->parent);
+        parent->draw_directions.resize = true;
+    }
 }
 
 void VFP(SetViewportMaxSize)(VFP(ViewportID) id, unsigned int main_axis, unsigned int cross_axis) {
@@ -797,14 +813,34 @@ void VFP(SetViewportMaxSize)(VFP(ViewportID) id, unsigned int main_axis, unsigne
     }
     idp->window.max_size.main_axis = main_axis;
     idp->window.max_size.cross_axis = cross_axis;
+
+    if(idp->axis == HORIZONTAL_AXIS || idp->axis == REVERSE_HORIZONTAL_AXIS) {
+        /* Main Axis is the X Axis */
+        if(idp->draw_directions.size.x > main_axis || idp->draw_directions.size.y > cross_axis) {
+            VFP(Viewport)* parent = __get_viewport_pointer(idp->parent);
+            parent->draw_directions.resize = true;
+        }
+    } else {
+        /* Main Axis is the Y Axis */
+        if(idp->draw_directions.size.x > cross_axis || idp->draw_directions.size.y > main_axis) {
+            VFP(Viewport)* parent = __get_viewport_pointer(idp->parent);
+            parent->draw_directions.resize = true;
+        }
+    }
+    if(main_axis == 0 || cross_axis == 0) {
+        VFP(Viewport)* parent = __get_viewport_pointer(idp->parent);
+        parent->draw_directions.resize = true;
+    }
 }
 
 void VFP(UndockViewport)(VFP(ViewportID) id) {
     //TODO: Relies on CUSTOM_TITLEBAR
+    //      Recalculate Parent Draw Commands Here
 }
 
 void VFP(DockViewport)(VFP(ViewportID) id) {
     //TODO: Relies on CUSTOM_TITLEBAR
+    //      Recalculate Parent Draw Commands Here
 }
 
 void VFP(SetViewportBackgroundColor)(VFP(ViewportID) id, VFP(Color) color) {
@@ -826,4 +862,6 @@ void VFP(SetViewportVisibility)(VFP(ViewportID) id, bool hidden) {
         return;
     }
     idp->hidden = hidden;
+    VFP(Viewport)* parent = __get_viewport_pointer(idp->parent);
+    parent->draw_directions.resize = true;
 }

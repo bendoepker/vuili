@@ -23,7 +23,6 @@ int main() {
         // Input Handling...
 
         DrawFrame();
-        SetWindowShouldClose();
     }
 
     // Cleanup

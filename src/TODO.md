@@ -8,6 +8,7 @@
 
 - Per Viewport Draw Commands List and Execution
     - _ExecuteDrawCommands() ^
+    - Recalculate Size Commands
 
 ## NON-BREAKING / NON-ASAP
 
