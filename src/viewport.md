@@ -152,7 +152,7 @@ We then divide the remaining amount of space by the number of viewports left to 
 
 This is then repeated for each of the child viewports
 
-WHEN TO RECALCULATE SIZE COMMANDS
+WHEN TO ISSUE RECALCULATE SIZE COMMANDS
 - When the window is resized the main viewport should be recalculated
     - This inlcudes fullscreen toggle, maximization, and restoration
     - Notably NOT including minimization

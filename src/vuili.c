@@ -27,9 +27,9 @@ void VFP(SleepX)(int milli) {
 char VuiliErrorText[128] = {0};
 
 /* Internal function declarations */
-static VFP(Viewport)* __get_viewport_pointer(VFP(ViewportID) id);
-static int __get_viewport_index(VFP(ViewportID) id);
+bool __check_viewport_exists(VFP(Viewport)* viewport);
 void _ExecuteDrawCommands(VFP(Viewport)* viewport);
+void _ResizeViewport(VFP(Viewport)* viewport);
 
 /* Internal Callbacks */
 static void __v_set_error_text(const char* const text, int n) {
@@ -54,7 +54,6 @@ static void __window_size_callback(GLFWwindow* window, int x, int y) {
         return;
     _VDATA.window.size.x = x;
     _VDATA.window.size.y = y;
-    _VDATA.viewports[0]->draw_directions.resize = true;
 }
 
 static void __minimize_callback(GLFWwindow* window, int minimized) {
@@ -71,7 +70,6 @@ static void __maximize_callback(GLFWwindow* window, int maximized) {
         _VDATA.window.maximized = true;
     else
         _VDATA.window.maximized = false;
-    _VDATA.viewports[0]->draw_directions.resize = true;
 }
 
 static void __frame_buffer_size_callback(GLFWwindow* window, int x, int y) {
@@ -211,20 +209,7 @@ void VFP(InitWindow)(const char* title, int pos_x, int pos_y, int width, int hei
 #endif
 
     /* Set the main window viewport */
-    if(!_VDATA.viewports[0]) {
-        /* We must allocate the space for the default viewport */
-        _VDATA.viewports[0] = malloc(sizeof(VFP(Viewport)));
-        if(!_VDATA.viewports[0]) {
-            __v_set_error_text("Failed to allocate memory", 26);
-            glfwDestroyWindow(_VDATA.window.window);
-            glfwTerminate();
-            return;
-        }
-    }
-    _VDATA.viewports[0]->axis = HORIZONTAL_AXIS;
-    _VDATA.viewports[0]->type = STATIC_VIEWPORT;
-    _VDATA.viewports[0]->parent = -1;
-    _VDATA.viewports[0]->draw_directions.resize = true;
+    //TODO:
 
     /* No error */
     __v_set_error_text("", 1);
@@ -233,9 +218,7 @@ void VFP(InitWindow)(const char* title, int pos_x, int pos_y, int width, int hei
 void VFP(CloseWindow)() {
     if(_VDATA.window.window)
         glfwDestroyWindow(_VDATA.window.window);
-    for(int i = 0; i < _VDATA.num_viewports; i++) {
-        free(_VDATA.viewports[i]);
-    }
+    //TODO: Free viewports
     memset(&_VDATA, 0, sizeof(_VDATA));
     glfwTerminate();
 #if defined(_WIN32) && defined(USE_HIGH_RES_TIMER)
@@ -291,59 +274,8 @@ void VFP(DrawFrame)() {
 
     /* Frame Drawing */
     VFP(ClearFrame)();
-    VFP(ViewportID) draw_layer[MAX_VIEWPORTS] = {0};
-    VFP(ViewportID) prev_draw_layer[MAX_VIEWPORTS] = {0};
-    /* Generate first draw layer */
-    for(int i = 0; i < MAX_CHILD_VIEWPORTS; i++) {
-        if(_VDATA.viewports[0]->children[i] == 0)
-            break;
-        else
-            draw_layer[i] = _VDATA.viewports[0]->children[i];
-    }
-    for(;;) {
-        for(int i = 0;; i++) {
-            /* Each viewport needs to be draw from parent viewport to child viewport, layer by layer */
-            /*
-            *           *       < Draw this     < Children of main viewport
-            *         *   *     < Then these    < Grandchildren of main viewport
-            *        * * * *    < Then these    < Great grandchildren of main viewport
-            *
-            *   Execute draw commands for each viewport in draw layer
-            *   Move draw layer to prev draw layer
-            *   Generate next draw layer
-            */
 
-            if(!draw_layer[i])
-                break;
-
-            _ExecuteDrawCommands(__get_viewport_pointer(draw_layer[i]));
-        }
-
-        /* Move the draw commands to the prev_draw_layer */
-        memset(prev_draw_layer, 0, sizeof(VFP(ViewportID)) * MAX_VIEWPORTS);
-        for(int i = 0;; i++) {
-            if(!draw_layer[i])
-                break;
-
-            prev_draw_layer[i] = draw_layer[i];
-        }
-
-        /* Create the new layer of draw commands */
-        memset(draw_layer, 0, sizeof(VFP(ViewportID)) * MAX_VIEWPORTS);
-        for(int i = 0, k = 0;; i++) {
-            if(prev_draw_layer[i]) {
-                VFP(Viewport)* cur = __get_viewport_pointer(prev_draw_layer[i]);
-                if(cur->num_children) {
-                    memcpy(&draw_layer[k], cur->children, cur->num_children * sizeof(VFP(ViewportID)));
-                    k += cur->num_children;
-                }
-            }
-            else break;
-        }
-
-        if(!draw_layer[0])
-            break;
-    }
+    //TODO: Drawing viewports
 
     VFP(SwapFrameBuffers)();
 
@@ -438,7 +370,7 @@ void VFP(ToggleFullscreen)() {
         _VDATA.window.fullscreen = true;
     }
 
-    _VDATA.viewports[0]->draw_directions.resize = true;
+    _VDATA.viewport.draw_directions.resize = true;
 }
 
 void VFP(SetFullscreenKey)(VFP(KeyboardInput) key) {
@@ -528,340 +460,125 @@ VFP(Vec2) VFP(GetMousePosition)() {
 /*
 *   Viewport functions
 */
-
-static VFP(Viewport)* __get_viewport_pointer(VFP(ViewportID) id) {
-    int lo = 0, hi = _VDATA.num_viewports - 1, mi = 0;
-    while(lo <= hi){
-        mi = lo + (hi - lo) / 2;
-        if(_VDATA.viewports[mi]->id > id) {
-            hi = mi - 1;
-        } else if(_VDATA.viewports[mi]->id < id) {
-            lo = mi + 1;
-        } else {
-            return _VDATA.viewports[mi];
-        }
-    }
-    return 0;
-}
-
-static int __get_viewport_index(VFP(ViewportID) id) {
-    int lo = 0, hi = _VDATA.num_viewports - 1, mi = 0;
-    while(lo <= hi){
-        mi = lo + (hi - lo) / 2;
-        if(_VDATA.viewports[mi]->id > id) {
-            hi = mi - 1;
-        } else if(_VDATA.viewports[mi]->id < id) {
-            lo = mi + 1;
-        } else {
-            return mi;
-        }
-    }
-    return -1;
-}
-
-/* Debug print viewport arrays */
-void __print_viewport_arr() {
-    PRINT("[");
-    for(int i = 0; i < MAX_VIEWPORTS; i++) {
-        VFP(ViewportID) id = 0;
-        id = _VDATA.viewports[i] ? _VDATA.viewports[i]->id : 0;
-        PRINT("\t%p : %d", _VDATA.viewports[i], id);
-    }
-    PRINT("]");
-}
-
-/* Debug print viewport arrays */
-void __print_children_arr(VFP(ViewportID) parent_id) {
-    if(parent_id == -1) return;
-    PRINT("Children of %d:\n[", parent_id);
-    VFP(Viewport)* parent = __get_viewport_pointer(parent_id);
-    for(int i = 0; i < MAX_CHILD_VIEWPORTS; i++) {
-        PRINT("\t%d", parent->children[i]);
-    }
-    PRINT("]");
-}
-
 void _ExecuteDrawCommands(VFP(Viewport)* viewport) {
-    //TODO: ^
+    //TODO:
 }
 
-VFP(ViewportID) VFP(RegisterViewport)(VFP(ViewportID) parent, int main_axis, int cross_axis) {
-    assert(parent >= 0);
-    /* Allocation and zero setting */
-    if(_VDATA.num_viewports == 0) {
-        /*
-         * If the main viewport has not been registered yet (i.e. we are registering viewports before InitWindow)
-         * Then we should create an empty viewport in its position
-         */
-        _VDATA.viewports[0] = malloc(sizeof(VFP(Viewport)));
-        if(!_VDATA.viewports[0]) {
-            __v_set_error_text("Failed to allocate memory", 26);
-            return -1;
-        }
-        memset(_VDATA.viewports[0], 0, sizeof(VFP(Viewport)));
-        _VDATA.num_viewports++;
-    }
-    if(_VDATA.num_viewports == MAX_VIEWPORTS) {
-        __v_set_error_text("Failed to create viewport, reached max viewports", 49);
-        return -1;
-    }
-    _VDATA.viewports[_VDATA.num_viewports] = malloc(sizeof(VFP(Viewport)));
-    if(_VDATA.viewports[_VDATA.num_viewports] == 0) {
-        __v_set_error_text("Failed to allocate memory", 26);
-        return -1;
-    }
-    VFP(Viewport)* this = _VDATA.viewports[_VDATA.num_viewports];
-    memset(this, 0, sizeof(VFP(Viewport)));
-
-    /* Set the id number and update global state */
-    if(_VDATA.num_viewports == 1) {
-        this->id = 1;
-    } else {
-        this->id = _VDATA.viewports[_VDATA.num_viewports - 1]->id + 1;
-    }
-    _VDATA.num_viewports++;
-
-    this->parent = parent;
-    this->window.size.main_axis = main_axis;
-    this->window.size.cross_axis = cross_axis;
-
-    VFP(Viewport)* p_parent = __get_viewport_pointer(parent);
-    if(!p_parent) {
-        __v_set_error_text("Parent viewport does not exist", 31);
-        return -1;
-    }
-    if(p_parent->num_children == MAX_CHILD_VIEWPORTS) {
-        __v_set_error_text("Parent viewport has reached max child viewports", 48);
-        return -1;
-    }
-    p_parent->children[p_parent->num_children] = this->id;
-    p_parent->num_children++;
-
-    p_parent->draw_directions.resize = true;
-
-    /* These are the default values (0) so they do not need to be explicitly set */
-    //this->axis = VFP(VERTICAL_AXIS);
-    //this->affinity = VFP(NO_AFFINITY);
-
-    /* Diagnostics
-    PRINT();
-    PRINT("ID: %d", this->id);
-    PRINT("Parent ID: %d", this->parent);
-    PRINT("X: %d", this->window.position.x);
-    PRINT("Y: %d", this->window.position.y);
-    PRINT("Width: %d", this->window.size.x);
-    PRINT("Height: %d", this->window.size.y);
-    PRINT("Axis: %d", this->axis);
-    PRINT("Affinity: %d", this->affinity);
-    */
-
-    /* Debug Viewport Array
-    __print_viewport_arr();
-    __print_children_arr(parent);
-    */
-    return this->id;
+void _ResizeViewport(VFP(Viewport)* viewport) {
+    //TODO:
 }
 
-/* Free the memory associated with a viewport and remove it from the global array of viewports */
-void __destroy_viewports_recursive(VFP(ViewportID) id) {
-    int this_idx = __get_viewport_index(id);
-    VFP(Viewport)* this = _VDATA.viewports[this_idx];
-
-    for(int i = 0; i < this->num_children; i++) {
-        __destroy_viewports_recursive(this->children[i]);
+VFP(Viewport)* VFP(RegisterViewport)(VFP(Viewport)* parent, int width, int height) {
+    VFP(Viewport)* out = malloc(sizeof(VFP(Viewport)));
+    if(!out) {
+        __v_set_error_text("Could not allocate space for a viewport", 40);
+        return 0;
     }
+    memset(out, 0, sizeof(VFP(Viewport)));
 
-    _VDATA.num_viewports--;
-    free(this);
-    _VDATA.viewports[this_idx] = 0;
-}
-
-/* The next two functions ensure that the viewport references are contiguously stored in their respective arrays */
-/* This removes the framgentation of the Viewport pointers in the global viewport array */
-void __defragment_viewport_array(VFP(Viewport)** array) {
-    int move_back = 0;
-    for(int i = 0; i < MAX_VIEWPORTS; i++) {
-        if(move_back && array[i]) {
-            array[i - move_back] = array[i];
-            array[i] = 0;
-        } else if(!array[i]) {
-            move_back++;
-        }
-    }
-}
-
-/* This removes fragmentation of the child IDs array in a viewport */
-void __defragment_child_viewport_array(VFP(Viewport)* parent) {
-    int move_back = 0;
-    for(int i = 0; i < MAX_CHILD_VIEWPORTS; i++) {
-        if(move_back && parent->children[i]) {
-            parent->children[i - move_back] = parent->children[i];
-            parent->children[i] = 0;
-        } else if(!parent->children[i]) {
-            move_back++;
-        }
-    }
-}
-
-void VFP(UnregisterViewport)(VFP(ViewportID) id) {
-    assert(id > 0);
-    VFP(ViewportID) parent_id;
-    VFP(Viewport)* parent;
-    parent = __get_viewport_pointer(parent_id);
     if(!parent) {
-        __v_set_error_text("Invalid viewport id", 20);
-        return;
+        if(_VDATA.viewport.num_children == MAX_CHILD_VIEWPORTS) {
+            __v_set_error_text("Maximum amount of children reached", 35);
+            free(out);
+            return 0;
+        }
+        _VDATA.viewport.children[_VDATA.viewport.num_children] = out;
+        _VDATA.viewport.num_children++;
+    } else {
+        if(parent->num_children == MAX_CHILD_VIEWPORTS) {
+            __v_set_error_text("Maximum amount of children reached", 35);
+            free(out);
+            return 0;
+        }
+        parent->children[parent->num_children] = out;
+        parent->num_children++;
+        out->parent = parent;
     }
-    parent_id = parent->parent;
 
-    for(int i = 0; i < MAX_CHILD_VIEWPORTS; i++) {
-        if(parent->children[i] == id)
+    out->window.size.x = width;
+    out->window.size.y = height;
+
+    return out;
+}
+
+void __defragment_viewport(VFP(Viewport)* viewport) {
+    for(register int i = 0, m = 0; i < MAX_CHILD_VIEWPORTS; i++) {
+        if(m && viewport->children[i]) {
+            viewport->children[i - m] = viewport->children[i];
+            viewport->children[i] = 0;
+        }
+        if(!viewport->children[i])
+            m++;
+    }
+}
+
+void __unregister_recursive(VFP(Viewport)* viewport) {
+    for(int i = 0; i < viewport->num_children; i++) {
+        __unregister_recursive(viewport->children[i]);
+    }
+    free(viewport);
+}
+void VFP(UnregisterViewport)(VFP(Viewport)* viewport) {
+    VFP(Viewport)* parent = viewport->parent;
+    __unregister_recursive(viewport);
+    for(int i = 0; i < parent->num_children; i++) {
+        if(parent->children[i] == viewport) {
             parent->children[i] = 0;
-    }
-    __destroy_viewports_recursive(id);
-
-    /* Viewport arrays are guaranteed to be ordered low to high but not for child viewports to be contiguous */
-    /* When the arrays are cleared the data must be restored to a contiguous series, hence defragmented */
-    __defragment_viewport_array(_VDATA.viewports);
-    __defragment_child_viewport_array(parent);
-    parent->num_children--;
-    parent->draw_directions.resize = true;
-
-    /* Debug Viewport Array
-    __print_viewport_arr();
-    __print_children_arr(parent_id);
-    */
-}
-
-void VFP(SetViewportType)(VFP(ViewportID) id, VFP(ViewportType) type) {
-    assert(id > 0);
-    VFP(Viewport)* idp = __get_viewport_pointer(id);
-    if(!idp) {
-        __v_set_error_text("Invalid id", 11);
-        return;
-    }
-    idp->type = type;
-}
-
-void VFP(SetViewportAxis)(VFP(ViewportID) id, VFP(ViewportAxis) axis) {
-    VFP(Viewport)* idp = __get_viewport_pointer(id);
-    if(!idp) {
-        __v_set_error_text("Invalid id", 11);
-        return;
-    }
-    idp->axis = axis;
-    VFP(Viewport)* parent = __get_viewport_pointer(idp->parent);
-    parent->draw_directions.resize = true;
-}
-
-void VFP(SetViewportAffinity)(VFP(ViewportID) id, VFP(ViewportAffinity) affinity) {
-    assert(id > 0);
-    VFP(Viewport)* idp = __get_viewport_pointer(id);
-    if(!idp) {
-        __v_set_error_text("Invalid id", 11);
-        return;
-    }
-    idp->affinity = affinity;
-}
-
-void VFP(SetViewportSize)(VFP(ViewportID) id, unsigned int main_axis, unsigned int cross_axis) {
-    assert(id > 0);
-    VFP(Viewport)* idp = __get_viewport_pointer(id);
-    if(!idp) {
-        __v_set_error_text("Invalid id", 11);
-        return;
-    }
-    idp->window.size.main_axis = main_axis;
-    idp->window.size.cross_axis = cross_axis;
-}
-
-void VFP(SetViewportMinSize)(VFP(ViewportID) id, unsigned int main_axis, unsigned int cross_axis) {
-    assert(id > 0);
-    VFP(Viewport)* idp = __get_viewport_pointer(id);
-    if(!idp) {
-        __v_set_error_text("Invalid id", 11);
-        return;
-    }
-    idp->window.min_size.main_axis = main_axis;
-    idp->window.min_size.cross_axis = cross_axis;
-
-    if(idp->axis == HORIZONTAL_AXIS || idp->axis == REVERSE_HORIZONTAL_AXIS) {
-        /* Main Axis is the X Axis */
-        if(idp->draw_directions.size.x < main_axis || idp->draw_directions.size.y < cross_axis) {
-            VFP(Viewport)* parent = __get_viewport_pointer(idp->parent);
-            parent->draw_directions.resize = true;
-        }
-    } else {
-        /* Main Axis is the Y Axis */
-        if(idp->draw_directions.size.x < cross_axis || idp->draw_directions.size.y < main_axis) {
-            VFP(Viewport)* parent = __get_viewport_pointer(idp->parent);
-            parent->draw_directions.resize = true;
+            parent->num_children--;
+            break;
         }
     }
-    if(main_axis == 0 || cross_axis == 0) {
-        VFP(Viewport)* parent = __get_viewport_pointer(idp->parent);
-        parent->draw_directions.resize = true;
-    }
+    __defragment_viewport(parent);
 }
 
-void VFP(SetViewportMaxSize)(VFP(ViewportID) id, unsigned int main_axis, unsigned int cross_axis) {
-    assert(id > 0);
-    VFP(Viewport)* idp = __get_viewport_pointer(id);
-    if(!idp) {
-        __v_set_error_text("Invalid id", 11);
-        return;
-    }
-    idp->window.max_size.main_axis = main_axis;
-    idp->window.max_size.cross_axis = cross_axis;
-
-    if(idp->axis == HORIZONTAL_AXIS || idp->axis == REVERSE_HORIZONTAL_AXIS) {
-        /* Main Axis is the X Axis */
-        if(idp->draw_directions.size.x > main_axis || idp->draw_directions.size.y > cross_axis) {
-            VFP(Viewport)* parent = __get_viewport_pointer(idp->parent);
-            parent->draw_directions.resize = true;
-        }
-    } else {
-        /* Main Axis is the Y Axis */
-        if(idp->draw_directions.size.x > cross_axis || idp->draw_directions.size.y > main_axis) {
-            VFP(Viewport)* parent = __get_viewport_pointer(idp->parent);
-            parent->draw_directions.resize = true;
-        }
-    }
-    if(main_axis == 0 || cross_axis == 0) {
-        VFP(Viewport)* parent = __get_viewport_pointer(idp->parent);
-        parent->draw_directions.resize = true;
-    }
+void VFP(SetViewportType)(VFP(Viewport)* viewport, VFP(ViewportType) type) {
+    assert(viewport != 0 && "The main viewport's type cannot be changed");
+    viewport->type = type;
 }
 
-void VFP(UndockViewport)(VFP(ViewportID) id) {
-    //TODO: Relies on CUSTOM_TITLEBAR
-    //      Recalculate Parent Draw Commands Here
+void VFP(SetViewportAxis)(VFP(Viewport)* viewport, VFP(ViewportAxis) axis) {
+    if(!viewport)
+        _VDATA.viewport.axis = axis;
+    else
+        viewport->axis = axis;
 }
 
-void VFP(DockViewport)(VFP(ViewportID) id) {
-    //TODO: Relies on CUSTOM_TITLEBAR
-    //      Recalculate Parent Draw Commands Here
+void VFP(SetViewportSize)(VFP(Viewport)* viewport, unsigned int width, unsigned int height) {
+    assert(viewport != 0 && "The main viewport's size cannot be changed independently of the window");
+    viewport->window.size.x = width;
+    viewport->window.size.y = height;
 }
 
-void VFP(SetViewportBackgroundColor)(VFP(ViewportID) id, VFP(Color) color) {
-    assert(id >= 0);
-    VFP(Viewport)* idp = __get_viewport_pointer(id);
-    if(!idp) {
-        __v_set_error_text("Invalid id", 11);
-        return;
-    }
-    idp->window.background_color = color;
+void VFP(SetViewportMinSize)(VFP(Viewport)* viewport, unsigned int width, unsigned int height) {
+    assert(viewport != 0 && "The main viewport's minimum size cannot be changed independently of the window");
+    viewport->window.min_size.x = width;
+    viewport->window.min_size.y = height;
 }
 
-void VFP(SetViewportVisibility)(VFP(ViewportID) id, bool hidden) {
-    /* The main viewport cannot be hidden */
-    assert(id > 0);
-    VFP(Viewport)* idp = __get_viewport_pointer(id);
-    if(!idp) {
-        __v_set_error_text("Invalid id", 11);
-        return;
-    }
-    idp->hidden = hidden;
-    VFP(Viewport)* parent = __get_viewport_pointer(idp->parent);
-    parent->draw_directions.resize = true;
+void VFP(SetViewportMaxSize)(VFP(Viewport)* viewport, unsigned int width, unsigned int height) {
+    assert(viewport != 0 && "The main viewport's minimum size cannot be changed independently of the window");
+    viewport->window.max_size.x = width;
+    viewport->window.max_size.y = height;
+}
+
+void VFP(UndockViewport)(VFP(Viewport)* viewport) {
+    assert(viewport != 0 && "The main viewport cannot be undocked from its parent viewport, that doesn't make sense");
+    //TODO:
+}
+
+void VFP(DockViewport)(VFP(Viewport)* viewport) {
+    assert(viewport != 0 && "The main viewport cannot be docked to a window, that doesn't make sense");
+    //TODO:
+}
+
+void VFP(SetViewportBackgroundColor)(VFP(Viewport)* viewport, VFP(Color) color) {
+    if(!viewport)
+        _VDATA.viewport.window.background_color = color;
+    else
+        viewport->window.background_color = color;
+}
+
+void VFP(SetViewportVisibility)(VFP(Viewport)* viewport, bool hidden) {
+    assert(viewport != 0 && "The main viewport's visibility cannot be changed, use the window visibility functions instead");
+    viewport->hidden = hidden;
 }

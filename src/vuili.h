@@ -106,42 +106,37 @@ VFP(Vec2) VFP(GetMousePosition)();
 /* Viewport functions */
 
 /*
- * Allocates a viewport as a parent of 'parent', returns the new viewport's id or -1 if failed
- * If main_axis and/or cross_axis are 0 then it will take the size of the parent's viewport's
- * cross axis and evenly space across the parent's main axis
 */
-VFP(ViewportID) VFP(RegisterViewport)(VFP(ViewportID) parent, int main_axis, int cross_axis);
+VFP(Viewport)* VFP(RegisterViewport)(VFP(Viewport)* parent, int width, int height);
 
 /* Deallocates viewport 'id' and all of its children and removes it from the global context */
-void VFP(UnregisterViewport)(VFP(ViewportID) id);
+void VFP(UnregisterViewport)(VFP(Viewport)* viewport);
 
 /* Set the Viewport Type of 'id' */
-void VFP(SetViewportType)(VFP(ViewportID) id, VFP(ViewportType) type);
+void VFP(SetViewportType)(VFP(Viewport)* viewport, VFP(ViewportType) type);
 
 /* Set the Viewport Axis of 'id' */
-void VFP(SetViewportAxis)(VFP(ViewportID) id, VFP(ViewportAxis) axis);
+void VFP(SetViewportAxis)(VFP(Viewport)* viewport, VFP(ViewportAxis) axis);
 
-/* Set the Viewport Affinity of 'id' */
-void VFP(SetViewportAffinity)(VFP(ViewportID) id, VFP(ViewportAffinity) affinity);
-
-void VFP(SetViewportSize)(VFP(ViewportID) id, unsigned int main_axis, unsigned int cross_axis);
+/* Set the Size fo the Viewport 'id' */
+void VFP(SetViewportSize)(VFP(Viewport)* viewport, unsigned int width, unsigned int height);
 
 /* Set the Minimum Size of 'id' */
-void VFP(SetViewportMinSize)(VFP(ViewportID) id, unsigned int main_axis, unsigned int cross_axis);
+void VFP(SetViewportMinSize)(VFP(Viewport)* viewport, unsigned int width, unsigned int height);
 
 /* Set the Maximum Size of 'id' */
-void VFP(SetViewportMaxSize)(VFP(ViewportID) id, unsigned int main_axis, unsigned int cross_axis);
+void VFP(SetViewportMaxSize)(VFP(Viewport)* viewport, unsigned int width, unsigned int height);
 
 /* Undock 'id' from its parent viewport */
-void VFP(UndockViewport)(VFP(ViewportID) id);
+void VFP(UndockViewport)(VFP(Viewport)* viewport);
 
 /* Dock 'id' to its parent viewport */
-void VFP(DockViewport)(VFP(ViewportID) id);
+void VFP(DockViewport)(VFP(Viewport)* viewport);
 
 /* Set the background color of 'id' */
-void VFP(SetViewportBackgroundColor)(VFP(ViewportID) id, VFP(Color) color);
+void VFP(SetViewportBackgroundColor)(VFP(Viewport)* viewport, VFP(Color) color);
 
 /* Set the visibility of a viewport */
-void VFP(SetViewportVisibility)(VFP(ViewportID) id, bool hidden);
+void VFP(SetViewportVisibility)(VFP(Viewport)* viewport, bool hidden);
 
 #endif //_VUILI_H

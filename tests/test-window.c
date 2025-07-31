@@ -4,8 +4,8 @@
 
 int main() {
 
-    ViewportID id1 = RegisterViewport(0, 0, 0);
-    PRINT("%s", GetLastErrorText());
+    Viewport* v1 = RegisterViewport(MAIN_VIEWPORT, 0, 0);
+    Viewport* v2 = RegisterViewport(MAIN_VIEWPORT, 0, 0);
     // Window Setup
     ToggleWindowFlags(TRANSPARENT_CLIENT | WINDOW_RESIZABLE | WINDOW_FULLSCREEN);
     InitWindow("Test Window", 500, 500, 1200, 800);

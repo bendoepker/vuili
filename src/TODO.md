@@ -94,6 +94,7 @@
     - Sliders
     - Text Box
     - Scroll Bars
+    - Color Picker
 - Unsorted Feature Set ✗
     - Undo / Redo
     - Config File Read / Write

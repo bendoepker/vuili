@@ -47,7 +47,6 @@
     #define VFP(x) x
 #endif
 
-#define MAX_VIEWPORTS               64
 #define MAX_CHILD_VIEWPORTS         8
 #define MAX_WINDOWS                 8
 #define MAX_MOUSE_BUTTONS           8

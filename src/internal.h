@@ -31,11 +31,6 @@ typedef struct {
 } Size;
 typedef Size Position;
 
-typedef struct {
-    u32 main_axis;
-    u32 cross_axis;
-} VSize;
-
 #if defined(_WIN32)
     __declspec(dllimport) void __stdcall Sleep(unsigned long milli);
     #if defined(USE_HIGH_RES_TIMER)
@@ -55,23 +50,22 @@ typedef struct {
     #error Sleep function undefined for MacOS (internal.h)
 #endif
 
-typedef struct {
-    VFP(ViewportID) id;                             //ID of this viewport
-    VFP(ViewportID) parent;                         //Viewport ID of the parent viewport
+typedef struct _Viewport {
+    VFP(Viewport)* parent;                          //Viewport* of the parent viewport
+    VFP(Viewport)* children[MAX_CHILD_VIEWPORTS];   //Viewport*'s of the direct children of this viewport
     VFP(unsigned int) num_children;                 //Number of direct children of this viewport
-    VFP(ViewportID) children[MAX_CHILD_VIEWPORTS];  //Viewport IDs of the direct children of this viewport
     VFP(ViewportType) type;                         //Viewport Type
     VFP(ViewportAxis) axis;                         //Render flow of the viewport
-    VFP(ViewportAffinity) affinity;                 //Affinity to the parent viewport
     bool hidden;                                    //If true then the viewport will not be rendered
+    bool undocked;                                  //If the viewport is undocked from its parent
     bool resizeable_main_axis;                      //If the viewport can be resized on its main axis
     bool resizeable_cross_axis;                     //If the viewport can be resized on its cross axis
 
     struct {
         GLFWwindow* window;                         //Pointer to the window containing this viewport, null if not undocked
-        VSize min_size;                             //Minimum size of the viewport
-        VSize max_size;                             //Maximum size of the viewport
-        VSize size;                                 //Current size of the viewport
+        Size min_size;                              //Minimum size of the viewport
+        Size max_size;                              //Maximum size of the viewport
+        Size size;                                  //Current size of the viewport
         Position position;                          //Position of the viewport in relation to the top left of the main window or monitor
         VFP(Color) background_color;                //Background color of the viewport
     } window;
@@ -80,6 +74,7 @@ typedef struct {
         bool resize;                                //Should the draw directions be recalculated
         Size size;
         Position position;
+        u16 order;
     } draw_directions;
 
     struct {
@@ -111,9 +106,7 @@ typedef struct VuiliData {
         GLFWwindow* window;                             //Pointer to the GLFW window
     } window;
 
-    /* It must be assured that there are no holes in this array if any viewports are removed */
-    int num_viewports;                                  //Number of viewports registered
-    VFP(Viewport)* viewports[MAX_VIEWPORTS];            //Array of viewports
+    VFP(Viewport) viewport;                             //Main viewport
 
     struct {
         /* Mouse Input */

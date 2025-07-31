@@ -21,24 +21,24 @@ typedef struct { float x1, y1, x2, y2; } VFP(Line);
 
 typedef enum {
     /* NOTE: These must be set before window creation */
-    WINDOW_RESIZABLE    = 0x00000001ull,    //Window will be resizeable in windowed mode
-    WINDOW_UNFOCUSED    = 0x00000002ull,    //Window will be unfocused on opening
-    TRANSPARENT_CLIENT  = 0x00000004ull,    //Client area will be transparent,
-    CUSTOM_TITLEBAR     = 0x00000008ull,    //Window will have a customizable title bar     //TODO:
-    WINDOW_FULLSCREEN   = 0x00000010ull,    //Window will be set to fullscreen              //TODO:
-    WINDOW_MAXIMIZED    = 0x00000020ull,    //Window will be maximized on opening
-    WINDOW_MINIMIZED    = 0x00000040ull,    //Window will be minimized on opening
+    VFP(WINDOW_RESIZABLE)    = 0x00000001ull,    //Window will be resizeable in windowed mode
+    VFP(WINDOW_UNFOCUSED)    = 0x00000002ull,    //Window will be unfocused on opening
+    VFP(TRANSPARENT_CLIENT)  = 0x00000004ull,    //Client area will be transparent,
+    VFP(CUSTOM_TITLEBAR)     = 0x00000008ull,    //Window will have a customizable title bar     //TODO:
+    VFP(WINDOW_FULLSCREEN)   = 0x00000010ull,    //Window will be set to fullscreen              //TODO:
+    VFP(WINDOW_MAXIMIZED)    = 0x00000020ull,    //Window will be maximized on opening
+    VFP(WINDOW_MINIMIZED)    = 0x00000040ull,    //Window will be minimized on opening
 
     /* Reserved flags */
-    FLAG_UNUSED05       = 0x00000080ull,
-    FLAG_UNUSED06       = 0x00000100ull,
-    FLAG_UNUSED07       = 0x00000200ull,
-    FLAG_UNUSED08       = 0x00000400ull,
-    FLAG_UNUSED09       = 0x00000800ull,
-    FLAG_UNUSED10       = 0x00001000ull,
-    FLAG_UNUSED11       = 0x00002000ull,
-    FLAG_UNUSED12       = 0x00004000ull,
-    FLAG_UNUSED13       = 0x00008000ull,
+    VFP(FLAG_UNUSED05)       = 0x00000080ull,
+    VFP(FLAG_UNUSED06)       = 0x00000100ull,
+    VFP(FLAG_UNUSED07)       = 0x00000200ull,
+    VFP(FLAG_UNUSED08)       = 0x00000400ull,
+    VFP(FLAG_UNUSED09)       = 0x00000800ull,
+    VFP(FLAG_UNUSED10)       = 0x00001000ull,
+    VFP(FLAG_UNUSED11)       = 0x00002000ull,
+    VFP(FLAG_UNUSED12)       = 0x00004000ull,
+    VFP(FLAG_UNUSED13)       = 0x00008000ull,
 } VFP(WindowFlags);
 
 //Key codes align with GLFW key codes
@@ -197,7 +197,8 @@ typedef enum {
 *   0 refers to the main viewport
 *   1 <-> MAX_VIEWPORTS are children of the main viewport or recursively children of those viewports
 */
-typedef int VFP(ViewportID);
+typedef struct _Viewport VFP(Viewport);
+#define MAIN_VIEWPORT (VFP(Viewport)*)0
 
 typedef enum {
     VFP(STATIC_VIEWPORT) = 0,                   //Cannot be undocked from its parent viewport
@@ -212,12 +213,5 @@ typedef enum {
     VFP(REVERSE_HORIZONTAL_AXIS) = 2,           //Child viewports are aligned from right to left
     VFP(REVERSE_VERTICAL_AXIS) = 3,             //Child viewports are aligned from bottom to top
 } VFP(ViewportAxis);
-
-// ViewportAffinity == The side of the parent viewport that the viewport will align to
-typedef enum {
-    VFP(NO_AFFINITY) = 0,                       //Viewport will not make any specific allignment attempts
-    VFP(FAR_AFFINITY) = 1,                      //Viewport will try to allign to the far side of the viewport's axis
-    VFP(CLOSE_AFFINITY) = 2,                    //Viewport will try to allign to the close side of the viewport's axis
-} VFP(ViewportAffinity);
 
 #endif //_V_TYPES_H
