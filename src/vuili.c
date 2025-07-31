@@ -54,6 +54,7 @@ static void __window_size_callback(GLFWwindow* window, int x, int y) {
         return;
     _VDATA.window.size.x = x;
     _VDATA.window.size.y = y;
+    _VDATA.viewport.draw_directions.resize = true;
 }
 
 static void __minimize_callback(GLFWwindow* window, int minimized) {
@@ -70,6 +71,7 @@ static void __maximize_callback(GLFWwindow* window, int maximized) {
         _VDATA.window.maximized = true;
     else
         _VDATA.window.maximized = false;
+    _VDATA.viewport.draw_directions.resize = true;
 }
 
 static void __frame_buffer_size_callback(GLFWwindow* window, int x, int y) {
@@ -209,7 +211,7 @@ void VFP(InitWindow)(const char* title, int pos_x, int pos_y, int width, int hei
 #endif
 
     /* Set the main window viewport */
-    //TODO:
+    _VDATA.viewport.draw_directions.resize = true;
 
     /* No error */
     __v_set_error_text("", 1);
@@ -468,6 +470,41 @@ void _ResizeViewport(VFP(Viewport)* viewport) {
     //TODO:
 }
 
+void print_viewports() {
+    int cur_num = 1;
+    int next_num;
+    VFP(Viewport)* cur_arr[64] = {0};
+    VFP(Viewport)* next_arr[64] = {0};
+    cur_arr[0] = &_VDATA.viewport;
+    for(int i = 0; i < _VDATA.viewport.num_children; i++) {
+        next_arr[i] = _VDATA.viewport.children[i];
+    }
+    for(;;) {
+        /* Span the depth of the tree */
+        next_num = 0;
+        memset(next_arr, 0, sizeof(VFP(Viewport)*) * 64);
+        printf("[ ");
+        for(int i = 0, k = 0; i < cur_num; i++) {
+            /* Span the width of the tree */
+            printf("%p ", cur_arr[i]);
+            next_num += cur_arr[i]->num_children;
+            for(int j = 0; j < cur_arr[i]->num_children; j++) {
+                next_arr[k] = cur_arr[i]->children[j];
+                k++;
+            }
+        }
+        printf("]\n");
+        if(next_num == 0)
+            break;
+        cur_num = next_num;
+        memset(cur_arr, 0, sizeof(VFP(Viewport)*) * 64);
+        for(int i = 0; i < cur_num; i++) {
+            cur_arr[i] = next_arr[i];
+        }
+    }
+    PRINT();
+}
+
 VFP(Viewport)* VFP(RegisterViewport)(VFP(Viewport)* parent, int width, int height) {
     VFP(Viewport)* out = malloc(sizeof(VFP(Viewport)));
     if(!out) {
@@ -484,6 +521,7 @@ VFP(Viewport)* VFP(RegisterViewport)(VFP(Viewport)* parent, int width, int heigh
         }
         _VDATA.viewport.children[_VDATA.viewport.num_children] = out;
         _VDATA.viewport.num_children++;
+        _VDATA.viewport.draw_directions.resize = true;
     } else {
         if(parent->num_children == MAX_CHILD_VIEWPORTS) {
             __v_set_error_text("Maximum amount of children reached", 35);
@@ -493,11 +531,15 @@ VFP(Viewport)* VFP(RegisterViewport)(VFP(Viewport)* parent, int width, int heigh
         parent->children[parent->num_children] = out;
         parent->num_children++;
         out->parent = parent;
+        parent->draw_directions.resize = true;
     }
 
     out->window.size.x = width;
     out->window.size.y = height;
 
+    //PRINT("Registered: %p", out);
+    //print_viewports();
+    _VDATA.num_reg_viewports++;
     return out;
 }
 
@@ -516,10 +558,16 @@ void __unregister_recursive(VFP(Viewport)* viewport) {
     for(int i = 0; i < viewport->num_children; i++) {
         __unregister_recursive(viewport->children[i]);
     }
+    //PRINT("Unregistered: %p", viewport);
+    _VDATA.num_reg_viewports--;
     free(viewport);
 }
 void VFP(UnregisterViewport)(VFP(Viewport)* viewport) {
-    VFP(Viewport)* parent = viewport->parent;
+    VFP(Viewport)* parent;
+    if(!viewport->parent)
+        parent = &_VDATA.viewport;
+    else
+        parent = viewport->parent;
     __unregister_recursive(viewport);
     for(int i = 0; i < parent->num_children; i++) {
         if(parent->children[i] == viewport) {
@@ -528,7 +576,9 @@ void VFP(UnregisterViewport)(VFP(Viewport)* viewport) {
             break;
         }
     }
+    parent->draw_directions.resize = true;
     __defragment_viewport(parent);
+    //print_viewports();
 }
 
 void VFP(SetViewportType)(VFP(Viewport)* viewport, VFP(ViewportType) type) {
@@ -537,10 +587,14 @@ void VFP(SetViewportType)(VFP(Viewport)* viewport, VFP(ViewportType) type) {
 }
 
 void VFP(SetViewportAxis)(VFP(Viewport)* viewport, VFP(ViewportAxis) axis) {
-    if(!viewport)
+    if(!viewport) {
         _VDATA.viewport.axis = axis;
-    else
+        _VDATA.viewport.draw_directions.resize = true;
+    }
+    else {
         viewport->axis = axis;
+        viewport->draw_directions.resize = true;
+    }
 }
 
 void VFP(SetViewportSize)(VFP(Viewport)* viewport, unsigned int width, unsigned int height) {
@@ -559,6 +613,12 @@ void VFP(SetViewportMaxSize)(VFP(Viewport)* viewport, unsigned int width, unsign
     assert(viewport != 0 && "The main viewport's minimum size cannot be changed independently of the window");
     viewport->window.max_size.x = width;
     viewport->window.max_size.y = height;
+    if(viewport->draw_directions.size.x > width || viewport->draw_directions.size.y > height) {
+        if(!viewport->parent)
+            _VDATA.viewport.draw_directions.resize = true;
+        else
+            viewport->parent->draw_directions.resize = true;
+    }
 }
 
 void VFP(UndockViewport)(VFP(Viewport)* viewport) {
@@ -581,4 +641,8 @@ void VFP(SetViewportBackgroundColor)(VFP(Viewport)* viewport, VFP(Color) color) 
 void VFP(SetViewportVisibility)(VFP(Viewport)* viewport, bool hidden) {
     assert(viewport != 0 && "The main viewport's visibility cannot be changed, use the window visibility functions instead");
     viewport->hidden = hidden;
+    if(!viewport->parent)
+        _VDATA.viewport.draw_directions.resize = true;
+    else
+        viewport->parent->draw_directions.resize = true;
 }

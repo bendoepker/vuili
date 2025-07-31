@@ -107,6 +107,7 @@ typedef struct VuiliData {
     } window;
 
     VFP(Viewport) viewport;                             //Main viewport
+    int num_reg_viewports;                              //The number of viewports currently registered
 
     struct {
         /* Mouse Input */

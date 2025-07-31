@@ -6,6 +6,11 @@ int main() {
 
     Viewport* v1 = RegisterViewport(MAIN_VIEWPORT, 0, 0);
     Viewport* v2 = RegisterViewport(MAIN_VIEWPORT, 0, 0);
+    Viewport* v3 = RegisterViewport(v1, 0, 0);
+    Viewport* v4 = RegisterViewport(v1, 0, 0);
+    Viewport* v5 = RegisterViewport(v2, 0, 0);
+    Viewport* v6 = RegisterViewport(v2, 0, 0);
+    UnregisterViewport(v2);
     // Window Setup
     ToggleWindowFlags(TRANSPARENT_CLIENT | WINDOW_RESIZABLE | WINDOW_FULLSCREEN);
     InitWindow("Test Window", 500, 500, 1200, 800);
