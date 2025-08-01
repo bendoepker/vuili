@@ -546,7 +546,6 @@ void _ExecuteDrawCommands(VFP(Viewport)* viewport) {
 }
 
 void _ResizeViewport(VFP(Viewport)* viewport) {
-    PRINT("RESIZE");
     /* A guard in case a leaf viewport has its axis changed or something */
     if(!viewport->num_children) {
         viewport->draw_directions.resize = false;
@@ -572,13 +571,17 @@ void _ResizeViewport(VFP(Viewport)* viewport) {
 
     /* Calculate the amount of space needed for the fixed spacing viewports */
     for(int i = 0; i < viewport->num_children; i++) {
+        if(viewport->children[i]->hidden) {
+            uncounted--;
+            continue;
+        }
         if(horizontal) {
             if(viewport->children[i]->window.size.x) {
                 remaining -= viewport->children[i]->window.size.x;
                 uncounted--;
             }
         } else {
-            if(viewport->children[i]->window.size.y) {
+            if(viewport->children[i]->window.size.y && !viewport->children[i]->hidden) {
                 remaining -= viewport->children[i]->window.size.y;
                 uncounted--;
             }
@@ -588,16 +591,25 @@ void _ResizeViewport(VFP(Viewport)* viewport) {
         flex = remaining / uncounted;
     }
 
-    /* Assign the rectangle to each of the viewports */
+    VFP(Viewport)* unhidden_viewports[viewport->num_children];
+    int j = 0;
     for(int i = 0; i < viewport->num_children; i++) {
+        if(!viewport->children[i]->hidden) {
+            unhidden_viewports[j] = viewport->children[i];
+            j++;
+        }
+    }
+
+    /* Assign the rectangle to each of the viewports */
+    for(int i = 0; i < j; i++) {
         VFP(Viewport)* cur_child;
 
         /* This is a little odd, but if it is a reverse axis then we will work backwards throught the viewports */
         /* rather than adjusting the algorithm for how we find each of the viewport's positions */
         if(reverse) {
-            cur_child = viewport->children[(viewport->num_children - 1) - i];
+            cur_child = unhidden_viewports[(j - 1) - i];
         } else  {
-            cur_child = viewport->children[i];
+            cur_child = unhidden_viewports[i];
         }
 
         if(horizontal) {

@@ -8,13 +8,16 @@
 
 - Per Viewport Draw Commands List and Execution
     - _ExecuteDrawCommands() ^
-    - Recalculate Size Commands
+        - I don't want this to be recursive so i can avoid any more stack use than I already have
+        - This should also respect that a viewport should not be drawn if one of its ancestors is hidden
+    - GLSL Vertex / Fragment Shaders to Render each of the visible viewport's backgrounds
 
 ## NON-BREAKING / NON-ASAP
 
-- Define Viewports before window creation
 - Change SetWindowFramerate() to SetFramerate()
 - RestoreWindow()
+- If i could change _ResizeViewport() to be non recursive that would be ideal but for the time being
+    I don't see it being a huge deal
 
 <br/>
 
