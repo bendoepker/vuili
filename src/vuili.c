@@ -30,6 +30,7 @@ char VuiliErrorText[128] = {0};
 bool __check_viewport_exists(VFP(Viewport)* viewport);
 void _ExecuteDrawCommands(VFP(Viewport)* viewport);
 void _ResizeViewport(VFP(Viewport)* viewport);
+void __print_viewport_sizes();
 
 /* Internal Callbacks */
 static void __v_set_error_text(const char* const text, int n) {
@@ -54,6 +55,8 @@ static void __window_size_callback(GLFWwindow* window, int x, int y) {
         return;
     _VDATA.window.size.x = x;
     _VDATA.window.size.y = y;
+    _VDATA.viewport.draw_directions.size.x = x;
+    _VDATA.viewport.draw_directions.size.y = y;
     _VDATA.viewport.draw_directions.resize = true;
 }
 
@@ -91,6 +94,10 @@ static void __key_callback(GLFWwindow* window, int key, int scancode, int action
             ToggleFullscreen();
             return;
         }
+    }
+    if(key == KEY_G) {
+        //WARN: TESTING ONLY
+        __print_viewport_sizes();
     }
 }
 
@@ -220,7 +227,9 @@ void VFP(InitWindow)(const char* title, int pos_x, int pos_y, int width, int hei
 void VFP(CloseWindow)() {
     if(_VDATA.window.window)
         glfwDestroyWindow(_VDATA.window.window);
-    //TODO: Free viewports
+    for(int i = 0; i < _VDATA.viewport.num_children; i++) {
+        UnregisterViewport(_VDATA.viewport.children[i]);
+    }
     memset(&_VDATA, 0, sizeof(_VDATA));
     glfwTerminate();
 #if defined(_WIN32) && defined(USE_HIGH_RES_TIMER)
@@ -277,7 +286,35 @@ void VFP(DrawFrame)() {
     /* Frame Drawing */
     VFP(ClearFrame)();
 
-    //TODO: Drawing viewports
+    int cur_num = 1;
+    int next_num;
+    VFP(Viewport)* cur_arr[_VDATA.num_reg_viewports];
+    VFP(Viewport)* next_arr[_VDATA.num_reg_viewports];
+    memset(cur_arr, 0, sizeof(VFP(Viewport)*) * _VDATA.num_reg_viewports);
+    cur_arr[0] = &_VDATA.viewport;
+    for(;;) { /* Span the depth of the tree */
+        next_num = 0;
+        memset(next_arr, 0, sizeof(VFP(Viewport)*) * _VDATA.num_reg_viewports);
+        for(int i = 0, k = 0; i < cur_num; i++) { /* Span the width of the tree */
+            if(cur_arr[i]->draw_directions.resize)
+                _ResizeViewport(cur_arr[i]);
+
+            _ExecuteDrawCommands(cur_arr[i]);
+
+            next_num += cur_arr[i]->num_children;
+            for(int j = 0; j < cur_arr[i]->num_children; j++) {
+                next_arr[k] = cur_arr[i]->children[j];
+                k++;
+            }
+        }
+        if(next_num == 0)
+            break;
+        cur_num = next_num;
+        memset(cur_arr, 0, sizeof(VFP(Viewport)*) * _VDATA.num_reg_viewports);
+        for(int i = 0; i < cur_num; i++) {
+            cur_arr[i] = next_arr[i];
+        }
+    }
 
     VFP(SwapFrameBuffers)();
 
@@ -365,11 +402,17 @@ void VFP(ToggleFullscreen)() {
         glfwSetWindowMonitor(_VDATA.window.window, NULL, _VDATA.window.position.x, _VDATA.window.position.y,
                              _VDATA.window.size.x, _VDATA.window.size.y, GLFW_DONT_CARE);
         _VDATA.window.fullscreen = false;
+        _VDATA.viewport.draw_directions.size.x = _VDATA.window.size.x;
+        _VDATA.viewport.draw_directions.size.y = _VDATA.window.size.y;
     } else {
         GLFWmonitor* monitor = glfwGetPrimaryMonitor();
         const GLFWvidmode* mode = glfwGetVideoMode(monitor);
         glfwSetWindowMonitor(_VDATA.window.window, monitor, 0, 0, mode->width, mode->height, GLFW_DONT_CARE);
         _VDATA.window.fullscreen = true;
+        int x, y;
+        glfwGetWindowSize(_VDATA.window.window, &x, &y);
+        _VDATA.viewport.draw_directions.size.x = x;
+        _VDATA.viewport.draw_directions.size.y = y;
     }
 
     _VDATA.viewport.draw_directions.resize = true;
@@ -462,12 +505,132 @@ VFP(Vec2) VFP(GetMousePosition)() {
 /*
 *   Viewport functions
 */
+void __print_viewport_sizes() {
+    int cur_num = 1;
+    int next_num;
+    VFP(Viewport)* cur_arr[64] = {0};
+    VFP(Viewport)* next_arr[64] = {0};
+    cur_arr[0] = &_VDATA.viewport;
+    for(int i = 0; i < _VDATA.viewport.num_children; i++) {
+        next_arr[i] = _VDATA.viewport.children[i];
+    }
+    for(;;) {
+        /* Span the depth of the tree */
+        next_num = 0;
+        memset(next_arr, 0, sizeof(VFP(Viewport)*) * 64);
+        printf("[ ");
+        for(int i = 0, k = 0; i < cur_num; i++) {
+            /* Span the width of the tree */
+            printf("(%p x: %d, y: %d, w: %d, h: %d) ", cur_arr[i], cur_arr[i]->draw_directions.position.x,
+                   cur_arr[i]->draw_directions.position.y, cur_arr[i]->draw_directions.size.x, cur_arr[i]->draw_directions.size.y);
+            next_num += cur_arr[i]->num_children;
+            for(int j = 0; j < cur_arr[i]->num_children; j++) {
+                next_arr[k] = cur_arr[i]->children[j];
+                k++;
+            }
+        }
+        printf("]\n");
+        if(next_num == 0)
+            break;
+        cur_num = next_num;
+        memset(cur_arr, 0, sizeof(VFP(Viewport)*) * 64);
+        for(int i = 0; i < cur_num; i++) {
+            cur_arr[i] = next_arr[i];
+        }
+    }
+    PRINT();
+}
+
 void _ExecuteDrawCommands(VFP(Viewport)* viewport) {
-    //TODO:
+    //TODO: Draw background of each viewport
 }
 
 void _ResizeViewport(VFP(Viewport)* viewport) {
-    //TODO:
+    PRINT("RESIZE");
+    /* A guard in case a leaf viewport has its axis changed or something */
+    if(!viewport->num_children) {
+        viewport->draw_directions.resize = false;
+        return;
+    }
+    int remaining;
+    int offset;
+    int flex;
+    int uncounted = viewport->num_children;
+    bool horizontal = false;
+    bool reverse = false;
+    if(viewport->axis == VERTICAL_AXIS || viewport->axis == REVERSE_VERTICAL_AXIS) {
+        remaining = viewport->draw_directions.size.y;
+        offset = viewport->draw_directions.position.y;
+    } else {
+        horizontal = true;
+        remaining = viewport->draw_directions.size.x;
+        offset = viewport->draw_directions.position.x;
+    }
+
+    if(viewport->axis == REVERSE_VERTICAL_AXIS || viewport->axis == REVERSE_HORIZONTAL_AXIS)
+        reverse = true;
+
+    /* Calculate the amount of space needed for the fixed spacing viewports */
+    for(int i = 0; i < viewport->num_children; i++) {
+        if(horizontal) {
+            if(viewport->children[i]->window.size.x) {
+                remaining -= viewport->children[i]->window.size.x;
+                uncounted--;
+            }
+        } else {
+            if(viewport->children[i]->window.size.y) {
+                remaining -= viewport->children[i]->window.size.y;
+                uncounted--;
+            }
+        }
+    }
+    if(uncounted) {
+        flex = remaining / uncounted;
+    }
+
+    /* Assign the rectangle to each of the viewports */
+    for(int i = 0; i < viewport->num_children; i++) {
+        VFP(Viewport)* cur_child;
+
+        /* This is a little odd, but if it is a reverse axis then we will work backwards throught the viewports */
+        /* rather than adjusting the algorithm for how we find each of the viewport's positions */
+        if(reverse) {
+            cur_child = viewport->children[(viewport->num_children - 1) - i];
+        } else  {
+            cur_child = viewport->children[i];
+        }
+
+        if(horizontal) {
+            if(cur_child->window.size.x) {
+                cur_child->draw_directions.size.x = cur_child->window.size.x;
+            } else {
+                cur_child->draw_directions.size.x = flex;
+            }
+
+            cur_child->draw_directions.size.y = viewport->draw_directions.size.y;
+            cur_child->draw_directions.position.y = viewport->draw_directions.position.y;
+
+            cur_child->draw_directions.position.x = offset;
+            offset += cur_child->draw_directions.size.x;
+        } else {
+            if(cur_child->window.size.y) {
+                cur_child->draw_directions.size.y = cur_child->window.size.y;
+            } else {
+                cur_child->draw_directions.size.y = flex;
+            }
+
+            cur_child->draw_directions.size.x = viewport->draw_directions.size.x;
+            cur_child->draw_directions.position.x = viewport->draw_directions.position.x;
+
+            cur_child->draw_directions.position.y = offset;
+            offset += cur_child->draw_directions.size.y;
+        }
+
+        if(cur_child->num_children)
+            _ResizeViewport(cur_child);
+    }
+
+    viewport->draw_directions.resize = false;
 }
 
 void print_viewports() {
