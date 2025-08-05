@@ -8,8 +8,6 @@
 
 - Per Viewport Draw Commands List and Execution
     - _ExecuteDrawCommands() ^
-        - I don't want this to be recursive so i can avoid any more stack use than I already have
-        - This should also respect that a viewport should not be drawn if one of its ancestors is hidden
     - GLSL Vertex / Fragment Shaders to Render each of the visible viewport's backgrounds
 
 ## NON-BREAKING / NON-ASAP

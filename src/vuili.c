@@ -27,9 +27,10 @@ void VFP(SleepX)(int milli) {
 char VuiliErrorText[128] = {0};
 
 /* Internal function declarations */
-bool __check_viewport_exists(VFP(Viewport)* viewport);
 void _ExecuteDrawCommands(VFP(Viewport)* viewport);
 void _ResizeViewport(VFP(Viewport)* viewport);
+void _DrawViewportBackground(VFP(Viewport)* viewport);
+GLuint _CreateShader(const char* vert_shader_path, const char* frag_shader_path);
 void __print_viewport_sizes();
 
 /* Internal Callbacks */
@@ -103,6 +104,86 @@ static void __key_callback(GLFWwindow* window, int key, int scancode, int action
 
 static void __mouse_callback(GLFWwindow* window, int button, int action, int mods) {
     (void)window;
+}
+
+GLuint _CreateShader(const char* vert_shader_path, const char* frag_shader_path) {
+    /* Get the vertex shader as a string */
+    FILE* vert_shader = fopen(vert_shader_path, "r");
+    if(!vert_shader) {
+        __v_set_error_text("Could not load the vertex shader", 33);
+        return 0;
+    }
+    fseek(vert_shader, 0, SEEK_END);
+    long vert_length = ftell(vert_shader);
+    rewind(vert_shader);
+    char* vert_src = malloc(vert_length + 1);
+    fread(vert_src, 1, vert_length, vert_shader);
+    vert_src[vert_length] = '\0';
+    fclose(vert_shader);
+
+    /* Get the fragment shader as a string */
+    FILE* frag_shader = fopen(frag_shader_path, "r");
+    if(!frag_shader) {
+        free(vert_src);
+        __v_set_error_text("Could not load the fragment shader", 35);
+        return 0;
+    }
+    fseek(frag_shader, 0, SEEK_END);
+    long frag_length = ftell(frag_shader);
+    rewind(frag_shader);
+    char* frag_src = malloc(frag_length + 1);
+    fread(frag_src, 1, frag_length, frag_shader);
+    frag_src[frag_length] = '\0';
+    fclose(frag_shader);
+
+    GLuint vertex = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vertex, 1, (const char* const*)&vert_src, NULL);
+    glCompileShader(vertex);
+    free(vert_src);
+
+    int success;
+    glGetShaderiv(vertex, GL_COMPILE_STATUS, &success);
+    if(!success) {
+        char log[128];
+        glGetShaderInfoLog(vertex, 128, NULL, log);
+        log[127] = '\0';
+        __v_set_error_text(log, 128);
+        free(frag_src);
+        return 0;
+    }
+
+    GLuint fragment = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fragment, 1, (const char* const*)&frag_src, NULL);
+    glCompileShader(fragment);
+    free(frag_src);
+
+    glGetShaderiv(fragment, GL_COMPILE_STATUS, &success);
+    if(!success) {
+        char log[128];
+        glGetShaderInfoLog(fragment, 128, NULL, log);
+        log[127] = '\0';
+        __v_set_error_text(log, 128);
+        return 0;
+    }
+
+    GLuint program = glCreateProgram();
+    glAttachShader(program, vertex);
+    glAttachShader(program, fragment);
+    glLinkProgram(program);
+
+    glGetProgramiv(program, GL_LINK_STATUS, &success);
+    if(!success) {
+        char log[128];
+        glGetProgramInfoLog(program, 128, NULL, log);
+        log[127] = '\0';
+        __v_set_error_text(log, 128);
+        return 0;
+    }
+
+    glDeleteShader(vertex);
+    glDeleteShader(fragment);
+
+    return program;
 }
 
 void VFP(InitWindow)(const char* title, int pos_x, int pos_y, int width, int height) {
@@ -219,6 +300,21 @@ void VFP(InitWindow)(const char* title, int pos_x, int pos_y, int width, int hei
 
     /* Set the main window viewport */
     _VDATA.viewport.draw_directions.resize = true;
+    _VDATA.viewport.draw_directions.vertices[0] = -1.0f;
+    _VDATA.viewport.draw_directions.vertices[1] = 1.0f;
+    _VDATA.viewport.draw_directions.vertices[3] = 1.0f;
+    _VDATA.viewport.draw_directions.vertices[4] = 1.0f;
+    _VDATA.viewport.draw_directions.vertices[6] = -1.0f;
+    _VDATA.viewport.draw_directions.vertices[7] = -1.0f;
+    _VDATA.viewport.draw_directions.vertices[9] = 1.0f;
+    _VDATA.viewport.draw_directions.vertices[10] = -1.0f;
+    glGenBuffers(1, &_VDATA.viewport.draw_directions.vertex_buffer);
+    glBindBuffer(GL_ARRAY_BUFFER, _VDATA.viewport.draw_directions.vertex_buffer);
+    glBufferData(GL_ARRAY_BUFFER, 12 * sizeof(float), _VDATA.viewport.draw_directions.vertices, GL_STATIC_DRAW);
+
+    _VDATA.background_shader = _CreateShader("../src/shaders/vertex.glsl", "../src/shaders/fragment.glsl");
+    if(!_VDATA.background_shader)
+        return;
 
     /* No error */
     __v_set_error_text("", 1);
@@ -281,6 +377,14 @@ void VFP(PollEvents)() {
     glfwPollEvents();
 }
 
+void _DrawViewportBackground(VFP(Viewport)* viewport) {
+    glBindBuffer(GL_ARRAY_BUFFER, viewport->draw_directions.vertex_buffer);
+
+    //TODO: Should just use glDrawArrays(...) with two GL_TRIANGLES but the format of the viewport vertices needs to be changed for this
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+
 void VFP(DrawFrame)() {
 
     /* Frame Drawing */
@@ -299,12 +403,14 @@ void VFP(DrawFrame)() {
             if(cur_arr[i]->draw_directions.resize)
                 _ResizeViewport(cur_arr[i]);
 
-            _ExecuteDrawCommands(cur_arr[i]);
-
-            next_num += cur_arr[i]->num_children;
-            for(int j = 0; j < cur_arr[i]->num_children; j++) {
-                next_arr[k] = cur_arr[i]->children[j];
-                k++;
+            if(!cur_arr[i]->hidden) {
+                /* If the viewport is unhidden we will draw it to the framebuffer and add its children to the next draw list */
+                _ExecuteDrawCommands(cur_arr[i]);
+                next_num += cur_arr[i]->num_children;
+                for(int j = 0; j < cur_arr[i]->num_children; j++) {
+                    next_arr[k] = cur_arr[i]->children[j];
+                    k++;
+                }
             }
         }
         if(next_num == 0)
@@ -521,8 +627,12 @@ void __print_viewport_sizes() {
         printf("[ ");
         for(int i = 0, k = 0; i < cur_num; i++) {
             /* Span the width of the tree */
-            printf("(%p x: %d, y: %d, w: %d, h: %d) ", cur_arr[i], cur_arr[i]->draw_directions.position.x,
-                   cur_arr[i]->draw_directions.position.y, cur_arr[i]->draw_directions.size.x, cur_arr[i]->draw_directions.size.y);
+            printf("(%p TL: %f %f, TR: %f %f, BL: %f %f, BR: %f %f) ", cur_arr[i],
+                   cur_arr[i]->draw_directions.vertices[0], cur_arr[i]->draw_directions.vertices[1],
+                   cur_arr[i]->draw_directions.vertices[3], cur_arr[i]->draw_directions.vertices[4],
+                   cur_arr[i]->draw_directions.vertices[6], cur_arr[i]->draw_directions.vertices[7],
+                   cur_arr[i]->draw_directions.vertices[9], cur_arr[i]->draw_directions.vertices[10]
+                   );
             next_num += cur_arr[i]->num_children;
             for(int j = 0; j < cur_arr[i]->num_children; j++) {
                 next_arr[k] = cur_arr[i]->children[j];
@@ -542,7 +652,6 @@ void __print_viewport_sizes() {
 }
 
 void _ExecuteDrawCommands(VFP(Viewport)* viewport) {
-    //TODO: Draw background of each viewport
 }
 
 void _ResizeViewport(VFP(Viewport)* viewport) {
@@ -638,6 +747,29 @@ void _ResizeViewport(VFP(Viewport)* viewport) {
             offset += cur_child->draw_directions.size.y;
         }
 
+        /* Top Left */
+        cur_child->draw_directions.vertices[0] = ((2.0f * cur_child->draw_directions.position.x) / (float)_VDATA.window.size.x) - 1.0f;
+        cur_child->draw_directions.vertices[1] = 1.0f - ((2.0f * cur_child->draw_directions.position.y) / (float)_VDATA.window.size.y);
+        /* vertices[2] is the z axis (0) */
+
+        /* Top Right */
+        cur_child->draw_directions.vertices[3] = ((2.0f * (cur_child->draw_directions.position.x + cur_child->draw_directions.size.x)) / (float)_VDATA.window.size.x) - 1.0f;
+        cur_child->draw_directions.vertices[4] = cur_child->draw_directions.vertices[1];
+        /* vertices[5] is the z axis (0) */
+
+        /* Bottom Left */
+        cur_child->draw_directions.vertices[6] = cur_child->draw_directions.vertices[0];
+        cur_child->draw_directions.vertices[7] = 1.0f - ((2.0f * (cur_child->draw_directions.position.y + cur_child->draw_directions.size.y)) / (float)_VDATA.window.size.y);
+        /* vertices[8] is the z axis (0) */
+
+        /* Bottom Right */
+        cur_child->draw_directions.vertices[9] = cur_child->draw_directions.vertices[3];
+        cur_child->draw_directions.vertices[10] = cur_child->draw_directions.vertices[7];
+        /* vertices[11] is the z axis (0) */
+
+        glBindBuffer(GL_ARRAY_BUFFER, cur_child->draw_directions.vertex_buffer);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, 12 * sizeof(float), cur_child->draw_directions.vertices);
+
         if(cur_child->num_children)
             _ResizeViewport(cur_child);
     }
@@ -715,6 +847,11 @@ VFP(Viewport)* VFP(RegisterViewport)(VFP(Viewport)* parent, int width, int heigh
     //PRINT("Registered: %p", out);
     //print_viewports();
     _VDATA.num_reg_viewports++;
+
+    glGenBuffers(1, &out->draw_directions.vertex_buffer);
+    glBindBuffer(GL_ARRAY_BUFFER, out->draw_directions.vertex_buffer);
+    glBufferData(GL_ARRAY_BUFFER, 12 * sizeof(float), out->draw_directions.vertices, GL_DYNAMIC_DRAW);
+
     return out;
 }
 

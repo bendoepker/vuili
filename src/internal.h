@@ -75,6 +75,8 @@ typedef struct _Viewport {
         Size size;
         Position position;
         u16 order;
+        float vertices[12];
+        GLuint vertex_buffer;
     } draw_directions;
 
     struct {
@@ -108,6 +110,7 @@ typedef struct VuiliData {
 
     VFP(Viewport) viewport;                             //Main viewport
     int num_reg_viewports;                              //The number of viewports currently registered
+    GLuint background_shader;                           //TODO: ?
 
     struct {
         /* Mouse Input */
