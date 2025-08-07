@@ -117,6 +117,7 @@ GLuint _CreateShader(const char* vert_shader_path, const char* frag_shader_path)
     long vert_length = ftell(vert_shader);
     rewind(vert_shader);
     char* vert_src = malloc(vert_length + 1);
+    memset(vert_src, 0, vert_length + 1);
     fread(vert_src, 1, vert_length, vert_shader);
     vert_src[vert_length] = '\0';
     fclose(vert_shader);
@@ -132,6 +133,7 @@ GLuint _CreateShader(const char* vert_shader_path, const char* frag_shader_path)
     long frag_length = ftell(frag_shader);
     rewind(frag_shader);
     char* frag_src = malloc(frag_length + 1);
+    memset(frag_src, 0, frag_length + 1);
     fread(frag_src, 1, frag_length, frag_shader);
     frag_src[frag_length] = '\0';
     fclose(frag_shader);
@@ -184,6 +186,15 @@ GLuint _CreateShader(const char* vert_shader_path, const char* frag_shader_path)
     glDeleteShader(fragment);
 
     return program;
+}
+
+void __viewport_init_opengl(VFP(Viewport)* viewport) {
+    glGenBuffers(1, &viewport->draw_directions.vertex_buffer);
+    glBindBuffer(GL_ARRAY_BUFFER, viewport->draw_directions.vertex_buffer);
+    glBufferData(GL_ARRAY_BUFFER, 8 * sizeof(float), viewport->draw_directions.vertices, GL_DYNAMIC_DRAW);
+    for(int i = 0; i < viewport->num_children; i++) {
+        __viewport_init_opengl(viewport->children[i]);
+    }
 }
 
 void VFP(InitWindow)(const char* title, int pos_x, int pos_y, int width, int height) {
@@ -313,8 +324,22 @@ void VFP(InitWindow)(const char* title, int pos_x, int pos_y, int width, int hei
     glBufferData(GL_ARRAY_BUFFER, 12 * sizeof(float), _VDATA.viewport.draw_directions.vertices, GL_STATIC_DRAW);
 
     _VDATA.background_shader = _CreateShader("../src/shaders/vertex.glsl", "../src/shaders/fragment.glsl");
-    if(!_VDATA.background_shader)
+    if(!_VDATA.background_shader) {
         return;
+    }
+
+    unsigned char background_indices[6] = {
+        0, 2, 1,
+        2, 3, 1
+    };
+
+    glGenBuffers(1, &_VDATA.background_ibo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _VDATA.background_ibo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(unsigned char), background_indices, GL_STATIC_DRAW);
+
+    for(int i = 0; i < _VDATA.viewport.num_children; i++) {
+        __viewport_init_opengl(_VDATA.viewport.children[i]);
+    }
 
     /* No error */
     __v_set_error_text("", 1);
@@ -379,8 +404,10 @@ void VFP(PollEvents)() {
 
 void _DrawViewportBackground(VFP(Viewport)* viewport) {
     glBindBuffer(GL_ARRAY_BUFFER, viewport->draw_directions.vertex_buffer);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _VDATA.background_ibo);
+    glUseProgram(_VDATA.background_shader);
 
-    //TODO: Should just use glDrawArrays(...) with two GL_TRIANGLES but the format of the viewport vertices needs to be changed for this
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_BYTE, NULL);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
@@ -652,6 +679,7 @@ void __print_viewport_sizes() {
 }
 
 void _ExecuteDrawCommands(VFP(Viewport)* viewport) {
+    _DrawViewportBackground(viewport);
 }
 
 void _ResizeViewport(VFP(Viewport)* viewport) {
@@ -750,25 +778,21 @@ void _ResizeViewport(VFP(Viewport)* viewport) {
         /* Top Left */
         cur_child->draw_directions.vertices[0] = ((2.0f * cur_child->draw_directions.position.x) / (float)_VDATA.window.size.x) - 1.0f;
         cur_child->draw_directions.vertices[1] = 1.0f - ((2.0f * cur_child->draw_directions.position.y) / (float)_VDATA.window.size.y);
-        /* vertices[2] is the z axis (0) */
 
         /* Top Right */
-        cur_child->draw_directions.vertices[3] = ((2.0f * (cur_child->draw_directions.position.x + cur_child->draw_directions.size.x)) / (float)_VDATA.window.size.x) - 1.0f;
-        cur_child->draw_directions.vertices[4] = cur_child->draw_directions.vertices[1];
-        /* vertices[5] is the z axis (0) */
+        cur_child->draw_directions.vertices[2] = ((2.0f * (cur_child->draw_directions.position.x + cur_child->draw_directions.size.x)) / (float)_VDATA.window.size.x) - 1.0f;
+        cur_child->draw_directions.vertices[3] = cur_child->draw_directions.vertices[1];
 
         /* Bottom Left */
-        cur_child->draw_directions.vertices[6] = cur_child->draw_directions.vertices[0];
-        cur_child->draw_directions.vertices[7] = 1.0f - ((2.0f * (cur_child->draw_directions.position.y + cur_child->draw_directions.size.y)) / (float)_VDATA.window.size.y);
-        /* vertices[8] is the z axis (0) */
+        cur_child->draw_directions.vertices[4] = cur_child->draw_directions.vertices[0];
+        cur_child->draw_directions.vertices[5] = 1.0f - ((2.0f * (cur_child->draw_directions.position.y + cur_child->draw_directions.size.y)) / (float)_VDATA.window.size.y);
 
         /* Bottom Right */
-        cur_child->draw_directions.vertices[9] = cur_child->draw_directions.vertices[3];
-        cur_child->draw_directions.vertices[10] = cur_child->draw_directions.vertices[7];
-        /* vertices[11] is the z axis (0) */
+        cur_child->draw_directions.vertices[6] = cur_child->draw_directions.vertices[3];
+        cur_child->draw_directions.vertices[7] = cur_child->draw_directions.vertices[7];
 
         glBindBuffer(GL_ARRAY_BUFFER, cur_child->draw_directions.vertex_buffer);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, 12 * sizeof(float), cur_child->draw_directions.vertices);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, 8 * sizeof(float), cur_child->draw_directions.vertices);
 
         if(cur_child->num_children)
             _ResizeViewport(cur_child);
@@ -848,9 +872,11 @@ VFP(Viewport)* VFP(RegisterViewport)(VFP(Viewport)* parent, int width, int heigh
     //print_viewports();
     _VDATA.num_reg_viewports++;
 
-    glGenBuffers(1, &out->draw_directions.vertex_buffer);
-    glBindBuffer(GL_ARRAY_BUFFER, out->draw_directions.vertex_buffer);
-    glBufferData(GL_ARRAY_BUFFER, 12 * sizeof(float), out->draw_directions.vertices, GL_DYNAMIC_DRAW);
+    if(_VDATA.window.window) {
+        glGenBuffers(1, &out->draw_directions.vertex_buffer);
+        glBindBuffer(GL_ARRAY_BUFFER, out->draw_directions.vertex_buffer);
+        glBufferData(GL_ARRAY_BUFFER, 12 * sizeof(float), out->draw_directions.vertices, GL_DYNAMIC_DRAW);
+    }
 
     return out;
 }
